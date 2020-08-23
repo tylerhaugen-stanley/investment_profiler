@@ -1,0 +1,135 @@
+require:
+  - rubocop-performance
+  - rubocop-rails
+
+AllCops:
+  TargetRubyVersion: 2.6
+  # This include only affects running rubocop from CLI
+  # and not from editors
+  Exclude:
+    - 'bin/**/*'
+    - 'config/**/*'
+    - 'db/**/*'
+    - 'script/**/*'
+    - 'regression_tests/**/*'
+    - 'test/**/*'
+    - 'vendor/**/*'
+
+#################### Lint ################################
+
+Lint/AssignmentInCondition:
+  AllowSafeAssignment: false
+  Severity: fatal
+  Enabled: true
+
+###################### Metrics ####################################
+
+# These metrics are currently disabled
+# Might want to enable in the future with more sensible defaults
+# for our codebase
+Metrics/AbcSize:
+  Description: >-
+    A calculated magnitude based on number of assignments,
+    branches, and conditions.
+  Max: 20
+  Enabled: false
+  # Reference: 'https://docs.rubocop.org/en/stable/cops_metrics/#metricsabcsize'
+
+Metrics/BlockLength:
+  Description: 'Avoid block lengths longer than 25 lines of code.'
+  Exclude:
+    - 'spec/**/*'
+  # Reference: 'https://docs.rubocop.org/en/stable/cops_metrics/#metricsblocklength'
+
+Metrics/ClassLength:
+  Description: 'Avoid classes longer than 250 lines of code.'
+  Enabled: false
+  # Reference: 'https://docs.rubocop.org/en/stable/cops_metrics/#metricsclasslength'
+
+Metrics/LineLength:
+  Description: 'Limit lines to 100 characters.'
+  Max: 100
+  Exclude:
+    - 'spec/**/*'
+  # Reference: 'https://docs.rubocop.org/en/stable/cops_metrics/#metricslinelength'
+
+Metrics/MethodLength:
+  Description: 'Avoid methods longer than 30 lines of code.'
+  Max: 30
+  Exclude:
+    - 'spec/**/*'
+  # Reference: 'https://docs.rubocop.org/en/stable/cops_metrics/#metricsmethodlength'
+
+Metrics/ModuleLength:
+  Description: 'Avoid modules longer than 250 lines of code.'
+  Enabled: false
+  Max: 250
+  # Reference: 'https://docs.rubocop.org/en/stable/cops_metrics/#metricsmodulelength'
+
+################## Layout / Style #################################
+Layout/AlignHash:
+  Description: >-
+    Check that the keys, separators, and values of a multi-line hash
+    literal are aligned according to configuration. '
+  EnforcedColonStyle: table
+  # Reference: 'https://docs.rubocop.org/en/stable/cops_layout/#layoutalignhash'
+
+Style/ClassAndModuleChildren:
+  Description: 'This cop checks the style of children definitions at classes and modules.'
+  Enabled: false
+  # Reference: 'https://docs.rubocop.org/en/stable/cops_style/#styleclassandmodulechildren'
+
+Style/Documentation:
+  Description: 'This cop checks for missing top-level documentation of classes and modules.'
+  Enabled: false
+  # Reference: 'https://docs.rubocop.org/en/stable/cops_style/#stylefrozenstringliteralcomment'
+
+Style/DoubleNegation:
+  Description: 'This cop checks for uses of double negation (!!) to convert something to a boolean value'
+  Enabled: false
+  # Reference: 'https://docs.rubocop.org/en/stable/cops_style/#styledoublenegation'
+
+Style/FrozenStringLiteralComment:
+  Description: >-
+    This cop is designed to help you transition from mutable string literals to
+    frozen string literals. It will add the comment # frozen_string_literal:
+    true to the top of files to enable frozen string literals. Frozen string
+    literals may be default in future Ruby. The comment will be added below a
+    shebang and encoding comment.
+  AutoCorrect: false
+  # Reference: 'https://docs.rubocop.org/en/stable/cops_style/#styledocumentation'
+
+
+Style/SymbolArray:
+  Description: 'Do not use %i or %I for arrays of symbols.'
+  EnforcedStyle: brackets
+  MinSize: 1
+  # Reference: 'https://docs.rubocop.org/en/stable/cops_style/#stylesymbolarray'
+
+Style/WordArray:
+  Description: 'Do not use %w or %W for arrays of words.'
+  EnforcedStyle: brackets
+  MinSize: 1
+  # Reference: 'https://docs.rubocop.org/en/stable/cops_style/#stylewordarray'
+
+Style/TrailingCommaInArrayLiteral:
+  Description: 'Checks for trailing comma in array literals.'
+  EnforcedStyleForMultiline: comma
+  # Reference: 'https://rubocop.readthedocs.io/en/latest/cops_style/#styletrailingcommainarrayliteral'
+
+Style/TrailingCommaInArguments:
+  Description: 'This cop checks for trailing comma in argument lists.'
+  Enabled: false
+  Exclude:
+    - 'spec/**/*'
+  # Reference: 'https://rubocop.readthedocs.io/en/latest/cops_style/#styletrailingcommainarguments'
+
+Style/TrailingCommaInHashLiteral:
+  Description: 'Checks for trailing comma in hash literals.'
+  EnforcedStyleForMultiline: comma
+  # Reference: 'https://rubocop.readthedocs.io/en/latest/cops_style/#styletrailingcommainhashliteral'
+
+###################### Rails ####################################
+Rails/Delegate:
+  Description: 'Disable checks for method delegation'
+  Enabled: false
