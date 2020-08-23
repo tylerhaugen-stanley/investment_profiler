@@ -5,6 +5,9 @@
 a key, you can get one for free [here](https://www.alphavantage.co/support/#api-key)
 * run `bundle install`
 
+# Running the app
+
+For now: `rails runner app/main.rb`
 
 # TODO clean this up
 

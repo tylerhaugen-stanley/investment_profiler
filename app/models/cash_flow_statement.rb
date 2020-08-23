@@ -1,13 +1,14 @@
 class CashFlowStatement
 
-  CLASS_FIELDS = ["fiscalDateEnding", "reportedCurrency", "investments", "changeInLiabilities",
-                  "cashflowFromInvestment", "otherCashflowFromInvestment", "netBorrowings",
-                  "cashflowFromFinancing", "otherCashflowFromFinancing",
-                  "changeInOperatingActivities", "netIncome", "changeInCash", "operatingCashflow",
-                  "otherOperatingCashflow", "depreciation", "dividendPayout",
-                  "stockSaleAndPurchase", "changeInInventory", "changeInAccountReceivables",
-                  "changeInNetIncome", "capitalExpenditures", "changeInReceivables",
-                  "changeInExchangeRate", "changeInCashAndCashEquivalents"]
+  CLASS_FIELDS = ["capital_expenditures", "cashflow_from_financing", "cashflow_from_investment",
+                  "change_in_account_receivables", "change_in_cash",
+                  "change_in_cash_and_cash_equivalents", "change_in_exchange_rate",
+                  "change_in_inventory", "change_in_liabilities", "change_in_net_income",
+                  "change_in_operating_activities", "change_in_receivables", "depreciation",
+                  "dividend_payout", "fiscal_date_ending", "investments", "net_borrowings",
+                  "net_income", "operating_cashflow", "other_cashflow_from_financing",
+                  "other_cashflow_from_investment", "other_operating_cashflow",
+                  "reported_currency", "stock_sale_and_purchase"]
 
   CLASS_FIELDS.map do |field|
     attr_reader field
