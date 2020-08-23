@@ -30,3 +30,23 @@
 
 # Ignore master key for decrypting credentials and more.
 /config/master.key
+
+# Ignore local dot-env's
+.env*.local
+
+.idea
+.bin
+
+# OSX
+.DS_Store
+
+#
+# Sublime Text
+#
+*.sublime-workspace
+
+# ASDF version manager
+.tool-versions
+
+# Byebug history
+.byebug_history
