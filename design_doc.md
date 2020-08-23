@@ -66,6 +66,7 @@ Need to think about how these aer organized.
     * Need to determine file naming & location. Maybe through configs?
     
 # Extra thoughts:
+  * Even for MVP, need a way to rate limit. Alpha vantage free tier is 5 requests a min an 500 a day.
   * Is there a way to write directly to excel? Style the document even?
     * [Spreadsheet gem](https://github.com/zdavatz/spreadsheet)
       * [Guide](https://github.com/zdavatz/spreadsheet/blob/master/GUIDE.md)
