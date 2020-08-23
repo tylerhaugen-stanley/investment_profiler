@@ -72,7 +72,7 @@ module Adapters
     def transform_reports(reports:, transform_class:)
       reports.map do |report|
         # Transform any "None" value to nil
-        report =report.transform_values { |v| v unless v.downcase == "none" }
+        report = report.transform_values { |v| v unless v.downcase == "none" }
 
         transform_class.new(data: report)
       end

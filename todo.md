@@ -1,2 +1,3 @@
 # TODO
-* Figure out why everything in /lib is not being autoloaded
+* Need to think about having the balance sheets, income_statements, etc ordered.
+* Handle API rate limiting. 

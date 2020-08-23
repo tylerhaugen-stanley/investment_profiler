@@ -1,4 +1,3 @@
-# require_relative '../app/models/overview'
 
 class Main
     args = {
