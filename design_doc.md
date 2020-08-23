@@ -67,6 +67,8 @@ Need to think about how these aer organized.
     
 # Extra thoughts:
   * Is there a way to write directly to excel? Style the document even?
+    * [Spreadsheet gem](https://github.com/zdavatz/spreadsheet)
+      * [Guide](https://github.com/zdavatz/spreadsheet/blob/master/GUIDE.md)
   
 # Future Improvements:
   * Want a way to analyze the data programmatically.
