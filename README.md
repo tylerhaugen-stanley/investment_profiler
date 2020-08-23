@@ -1,7 +1,7 @@
 # README
 
 ## Local Setup
-* Create a local file called `.end.development.local` and add `ALPHAVANTAGE_API_KEY`. If you do not have
+* Create a local file called `.env.development.local` and add `ALPHAVANTAGE_API_KEY`. If you do not have
 a key, you can get one for free [here](https://www.alphavantage.co/support/#api-key)
 * run `bundle install`
 
