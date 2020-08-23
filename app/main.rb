@@ -1,4 +1,4 @@
-# require_relative '../app/models/overview'
+require 'json'
 
 class Main
     args = {
@@ -22,12 +22,15 @@ class Main
       "BookValue"=> "15.626",
       "DividendPerShare"=> "2.04"}
 
-    test = Overview.new(data: args)
-    puts test.symbol
+    api = Adapters::AlphaVantage.new
+    stock = api.stock(symbol: "AAPL")
 
-    # api = Adapters::AlphaVantage.new
-    # binding.pry
-    # stock = api.stock(symbol: "AAPL")
-    # binding.pry
+    begin
+      builder = Builders::CsvBuilder.new(["the", "headers"])
+      builder.add_stock_data(stock, [2018, 2019])
+      builder.build()
+    rescue StandardError => e
+      Rails.logger.error e.message
+    end
 
   end
