@@ -24,9 +24,10 @@ class Main
     test = Overview.new(data: args)
     puts test.symbol
 
-    # api = Adapters::AlphaVantage.new
+    api = Adapters::AlphaVantage.new
     # binding.pry
-    # stock = api.stock(symbol: "AAPL")
-    # binding.pry
+    stock = api.stock(symbol: "AAPL")
+
+    binding.pry
 
   end

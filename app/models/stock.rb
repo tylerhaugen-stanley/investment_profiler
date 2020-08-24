@@ -1,85 +1,199 @@
 class Stock
-  attr_reader :symbol, :overview, :balance_sheets, :income_statements, :cash_flow_statements
+  attr_reader :symbol, :overview, :balance_sheets, :income_statements, :cash_flow_statements, :time_series
 
-  def initialize(symbol:, overview: nil, balance_sheets: nil, income_statements: nil, cash_flow_statements: nil)
+  def initialize(symbol:, overview: nil, balance_sheets: nil, income_statements: nil,
+                 cash_flow_statements: nil, time_series: nil)
     @symbol = symbol
     @overview = overview
     @balance_sheets = balance_sheets
     @cash_flow_statements = cash_flow_statements
     @income_statements = income_statements
+    @time_series = time_series
   end
 
-  def get_all_ratios(date:, period:)
+  def get_all_ratios(period:, year:)
+
+    # look up date based on period and year
+
+    # module
+    #   Q1 = 1
+    #   Q2 = 2
+    #   Q3 = 3
+    #   Q4 = 4
+    #   AN = 5
+    # end
+    #period, year
+
     {
-      "return_on_equity" => return_on_equity(date: date, period: period)
+      :return_on_equity => return_on_equity(date: date, period: period),
+      :price_to_earnings => price_to_earnings(date: date, period: period),
+      :price_to_book => price_to_book(date: date, period: period),
+      :earnings_per_share => earnings_per_share(date: date, period: period),
+      :price_to_earnings_growth => price_to_earnings_growth(date: date, period: period),
+      :price_to_sales => price_to_sales(date: date, period: period),
+      :debt_to_equity => debt_to_equity(date: date, period: period),
+      :market_cap => market_cap(date: date, period: period),
+      :retained_earnings => retained_earnings(date: date, period: period),
+      :research_and_development => research_and_development(date: date, period: period),
+      :dividend_yield => dividend_yield(date: date, period: period),
+      :dividend_payout => dividend_payout(date: date, period: period),
+      :gross_margin => gross_margin(date: date, period: period),
+      :inventory_turnover => inventory_turnover(date: date, period: period),
     }
   end
 
   # ---------- Ratio Calculations  ----------
   def return_on_equity(date:, period:)
-    # Net income / Average shareholders' equity.
-    # income statement || balance sheet
+    net_income = net_income(date: date, period: period)
+    shareholder_equity = shareholder_equity(date: date, period: period)
+
+    net_income / shareholder_equity
   end
 
-  def price_to_earnings
-    # Current stock price / Earnings per share.
+  def price_to_earnings(date:, period:)
+    eps = earnings_per_share(date: date, period: period)
+    stock_price = stock_price_for_date(date: date)
+
+    stock_price / eps
   end
 
-  def price_to_book
-    # current stock price / Book value per share.
-    #
-    # book_value per share = (total assets - total liabilities) / number of outstanding shares
+  def price_to_book(date:, period:)
+    stock_price = stock_price_for_date(date: date)
+
+    balance_sheet = balance_sheet_helper(date: date, period: period)
+    total_assets = balance_sheet.total_assets
+    total_liabilities = balance_sheet.total_liabilities
+    num_shares_outstanding = num_shares_outstanding(date: date, period: period)
+
+    book_value = (total_assets - total_liabilities) / num_shares_outstanding
+    stock_price / book_value
   end
 
-  def earnings_per_share
-    # net income / number of outstanding shares
+  def earnings_per_share(date:, period:)
+    net_income = net_income(date: date, period: period)
+    num_shares_outstanding = num_shares_outstanding(date: date, period: period)
+
+    net_income / num_shares_outstanding
   end
 
-  def price_to_earnings_growth
+  def price_to_earnings_growth(date:, period:)
+    @overview.peg_ratio # ** This is just for the previous quarter.
+    # Maybe use overview.quarterly_earnings_growth_yoy
     # price_to_earnings / earnings per share growth (Analyst growth value)
   end
 
-  def price_to_sales
-    # current stock price / sales per share
-    #
-    # sales per share = total revenue / number of outsanding shares.
+  def price_to_sales(date:, period:)
+    stock_price = stock_price_for_date(date: date)
+    num_shares_outstanding = num_shares_outstanding(date: date, period: period)
+    total_revenue = income_statement_helper.total_revenue
+
+    sales_per_share = total_revenue / num_shares_outstanding
+    stock_price / sales_per_share
   end
 
-  def debt_to_equity
-    # Total liabilites / total shareholder equity
-    #
-    # total_shareholder_equity = assets - liabilities
+  def debt_to_equity(date:, period:)
+    total_liabilities = balance_sheet.total_liabilities
+    shareholder_equity = shareholder_equity(date: date, period: period)
+
+    total_liabilities / shareholder_equity
   end
 
-  def market_cap
-    # Price per share * number of outstanding shares
+  def market_cap(date:, period:)
+    stock_price = stock_price_for_date(date: date)
+    num_shares_outstanding = num_shares_outstanding(date: date, period: period)
+
+    stock_price * num_shares_outstanding
   end
 
-  def retained_earnings
-    # RE = Beginning Period RE + Net Income/Loss – Cash Dividends – Stock Dividends
-    #
-    # For us, it's already calcualted on the balance sheet. YAY!
+  def retained_earnings(date:, period:)
+    balance_sheet = balance_sheet_helper(date: date, period: period)
+
+    balance_sheet.retained_earnings
   end
 
-  def research_and_development
-    # on the income statement researchAndDevelopment
+  def research_and_development(date:, period:)
+    income_statement = income_statement_helper(date: date, period: period)
+    income_statement.research_and_development
   end
 
-  def dividend_yield
+  def dividend_yield(date:, period:)
+    nil # TODO
     # dollar value of dividends paid per share / price per share
   end
 
-  def dividend_payout
-    # Dividend paid per share / earnings per share
+  def dividend_payout(date:, period:)
+    cash_flow_statement = cash_flow_statement_helper(date: date, period: period)
+
+    cash_flow_statement.dividend_payout
   end
 
-  def gross_margin
+  def gross_margin(date:, period:)
+    nil # TODO
+    # cogs = cost_of_revenue
+    #
+    # net_sales = total_revenue
     # net sales - cost of goods sold
   end
 
-  def inventory_turnover
-    # sales / average inventory
-    #
-    # Average Inventory = (Beginning Inventory + Ending Inventory) / 2
+  def inventory_turnover(date:, period:)
+    income_statement = income_statement_helper(date: date, period: period)
+    balance_sheet = balance_sheet_helper(date: date, period: period)
+    cost_of_revenue = income_statement.cost_of_revenue
+    inventory = balance_sheet.inventory
+
+    cost_of_revenue / inventory
+  end
+
+  private
+
+  def stock_price_for_date(date:)
+    stock_price = @time_series&.daily(date)&.close
+    raise StockError, "Unable to find stock price for date: #{date}" if stock_price.nil?
+
+    stock_price
+  end
+
+  def balance_sheet_helper(date:, period:)
+    balance_sheet = @balance_sheets.dig(period, date)
+    raise StockError, "Unable to find balance sheet for period: #{period} & date: #{date}" if balance_sheet.nil?
+
+    balance_sheet
+  end
+
+  def cash_flow_statement_helper(date:, period:)
+    cash_flow_statement = @cash_flow_statements.dig(period, date)
+    raise StockError, "Unable to find cash flow statement for period: #{period} & date: #{date}" if cash_flow_statement.nil?
+
+    cash_flow_statement
+  end
+
+  def income_statement_helper(date:, period:)
+    income_statement = @income_statements.dig(period, date)
+    raise StockError, "Unable to find income statement for period: #{period} & date: #{date}" if income_statement.nil?
+  end
+
+  def net_income(date:, period:)
+    net_income = income_statement_helper(date: date, period: period).net_income
+    raise StockError, "Unable to get net income. Period: #{period} & date: #{date}" if net_income.nil?
+
+    net_income
+  end
+
+  def num_shares_outstanding(date:, period:)
+    balance_sheet = balance_sheet_helper(date: date, period: period)
+    num_shares_outstanding = balance_sheet.common_stock_shares_outstanding
+    raise StockError, "Unable to get num shares outstanding. Period: #{period} & date: #{date}" if num_shares_outstanding.nil?
+
+    num_shares_outstanding
+  end
+
+  def shareholder_equity(date:, period:)
+    balance_sheet = balance_sheet_helper(date: date, period: period)
+    shareholder_equity = balance_sheet.total_shareholder_equity
+    raise StockError, "Unable to get shareholder equity. Period: #{period} & date: #{date}" if shareholder_equity.nil?
+
+    shareholder_equity
   end
 end
+
+class StockError < StandardError; end

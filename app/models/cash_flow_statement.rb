@@ -19,7 +19,7 @@ class CashFlowStatement
       err = "Received a key during initialization that is not supported. Key: #{k}"
       raise CashFlowError, err unless CLASS_FIELDS.include?(k.underscore)
 
-      instance_variable_set("@#{k.underscore}", v)
+      instance_variable_set("@#{k.underscore}", v.to_f)
     end
   end
 end
