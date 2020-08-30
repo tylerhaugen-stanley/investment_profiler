@@ -7,11 +7,11 @@ module Adapters
     def stock(symbol:)
       Stock.new(
         symbol: symbol,
-        # overview: overview(symbol: symbol),
+        overview: overview(symbol: symbol),
         # balance_sheets: balance_sheets(symbol: symbol),
         # cash_flow_statements: cash_flow_statements(symbol: symbol),
         # income_statements: income_statements(symbol: symbol),
-        time_series: time_series(symbol: symbol),
+        # time_series: time_series(symbol: symbol),
       )
     end
 
@@ -19,9 +19,9 @@ module Adapters
 
     def balance_sheets(symbol:)
       av_fundamental_data = @client.fundamental_data(symbol: symbol)
-      ensure_exists(av_fundamental_data)
+      ensure_exists(data: av_fundamental_data)
       av_balance_sheets = av_fundamental_data.balance_sheets(period: :both)
-      ensure_exists(av_balance_sheets)
+      ensure_exists(data: av_balance_sheets)
 
       {
         :quarterly => transform_reports(
@@ -35,9 +35,9 @@ module Adapters
 
     def cash_flow_statements(symbol:)
       av_fundamental_data = @client.fundamental_data(symbol: symbol)
-      ensure_exists(av_fundamental_data)
+      ensure_exists(data: av_fundamental_data)
       av_cash_flow_statements = av_fundamental_data.cash_flow_statements(period: :both)
-      ensure_exists(av_cash_flow_statements)
+      ensure_exists(data: av_cash_flow_statements)
 
       {
         :quarterly => transform_reports(
@@ -51,9 +51,9 @@ module Adapters
 
     def income_statements(symbol:)
       av_fundamental_data = @client.fundamental_data(symbol: symbol)
-      ensure_exists(av_fundamental_data)
+      ensure_exists(data: av_fundamental_data)
       av_income_statements = av_fundamental_data.income_statements(period: :both)
-      ensure_exists(av_income_statements)
+      ensure_exists(data: av_income_statements)
 
       {
         :quarterly => transform_reports(
@@ -67,7 +67,7 @@ module Adapters
 
     def overview(symbol:)
       av_fundamental_data = @client.fundamental_data(symbol: symbol)
-      ensure_exists(av_fundamental_data)
+      ensure_exists(data: av_fundamental_data)
       av_overview = av_fundamental_data.overview
       ensure_exists(data: av_overview)
 
@@ -76,7 +76,7 @@ module Adapters
 
     def time_series(symbol:)
       av_stock = @client.stock symbol: symbol
-      av_time_series = av_stock.timeseries(outputsize: "full")
+      av_time_series = av_stock.timeseries(outputsize: ENV["TIMESERIES_OUTPUT_SIZE"])
       ensure_exists(data: av_time_series)
 
       TimeSeries.new(time_series_dailies: transform_time_series_dailies(av_time_series: av_time_series))
@@ -84,13 +84,19 @@ module Adapters
 
     # ---------- Transform methods ----------
     def transform_reports(reports:, transform_class:)
-      reports.map do |report|
-        # Transform any "None" value to nil
-        report = report.transform_values { |v| v unless v.downcase == "none" }
+      reports.each_with_object({}) do |report, hash|
+        report = report.transform_values do |v|
+          # Data returned from alpha vantage is base thousands, convert to base millions
+          # Need to begin/rescue because the data is returned as strings.
+          begin
+            Float(v) / 1_000.0
+          rescue
+            # Transform any "None" value to nil
+            v unless v.downcase == "none"
+          end
+        end
 
-        {
-          report["fiscalDateEnding"] => transform_class.new(data: report)
-        }
+        hash[report["fiscalDateEnding"]] = transform_class.new(data: report)
       end
     end
 
@@ -100,20 +106,13 @@ module Adapters
       Overview.new(data: av_overview.except(*unwanted_keys))
     end
 
+    # Output:
+    # {
+    #   date -> TimeSeriesDaily
+    # }
     def transform_time_series_dailies(av_time_series:)
-      # Currently
-      # [
-      #   {date => TimeSeriesDaily}
-      # ]
-      #
-      # Want:
-      # {
-      #   date -> TimeSeriesDaily
-      # }
-      # TODO There is a better way to do this.
-      ret_val = {}
-      av_time_series.output["Time Series (Daily)"].each do |date, time_series_daily|
-        ret_val[date.to_date.to_s] = TimeSeriesDaily.new(
+      av_time_series.output["Time Series (Daily)"].each_with_object({}) do |(date, time_series_daily), hash|
+        hash[date.to_date.to_s] = TimeSeriesDaily.new(
           date: date.to_date,
           open: time_series_daily["1. open"].to_f,
           high: time_series_daily["2. high"].to_f,
@@ -122,7 +121,6 @@ module Adapters
           volume: time_series_daily["5. volume"].to_i,
         )
       end
-      ret_val
     end
 
     # ---------- Helper methods ----------

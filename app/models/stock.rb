@@ -13,6 +13,11 @@ class Stock
 
   def get_all_ratios(period:, year:)
 
+    # get_all_ratios(year, period, period2)
+    # get_all_ratios(2019, :quarterly, Q1)
+    # get_all_ratios(2019, :yearly, AN)
+    # get_all_ratios(nil, :ttm, nil)
+
     # look up date based on period and year
 
     # module
@@ -44,6 +49,8 @@ class Stock
 
   # ---------- Ratio Calculations  ----------
   def return_on_equity(date:, period:)
+    # return @overview.returnOnEquityTTM if period == :ttm
+
     net_income = net_income(date: date, period: period)
     shareholder_equity = shareholder_equity(date: date, period: period)
 
@@ -147,7 +154,7 @@ class Stock
   private
 
   def stock_price_for_date(date:)
-    stock_price = @time_series&.daily(date)&.close
+    stock_price = @time_series&.daily(date: date)&.close
     raise StockError, "Unable to find stock price for date: #{date}" if stock_price.nil?
 
     stock_price

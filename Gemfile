@@ -38,6 +38,12 @@ group :development do
 
   gem 'dotenv', '~> 2.7'
 
+  # So you don't have to recompile ruby to get readline support
+  # This means it'll be easier to get cmd history on new pry sessions
+  # If you want to use the compiled readline, set USE_SYSTEM_READLINE=1
+  # (it must be set in your actual environment, not a .env file)
+  gem 'rb-readline'
+
   # Debugging tools
   gem 'pry-rails'
   gem 'pry-byebug',         require: false
