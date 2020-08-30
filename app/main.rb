@@ -24,14 +24,13 @@ class Main
 
     api = Adapters::AlphaVantage.new
     stock = api.stock(symbol: "AAPL")
-    binding.pry
 
     begin
-        builder = Builders::CsvBuilder.new(["the", "headers"])
-        builder.add_stock_data(stock, [2018, 2019])
-        builder.build()
+      builder = Builders::CsvBuilder.new(["the", "headers"])
+      builder.add_stock_data(stock, [2018, 2019])
+      builder.build()
     rescue StandardError => e
-        Rails.logger.error e.message
+      Rails.logger.error e.message
     end
 
 end

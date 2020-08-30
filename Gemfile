@@ -58,6 +58,5 @@ end
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem 'tzinfo-data', platforms: [:mingw, :mswin, :x64_mingw, :jruby]
 
-# TODO Update this once my PR to the main alphavantage is approved. 
+# TODO Update this once my PR to the main alphavantage is approved.
 gem "alphavantagerb", "1.5.0", git: "git://github.com/tylerhaugen-stanley/AlphaVantageRB.git", branch: 'add_fundamental_data_support'
-gem 'csv'
