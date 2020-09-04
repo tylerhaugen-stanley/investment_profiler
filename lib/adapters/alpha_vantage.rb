@@ -8,17 +8,17 @@ module Adapters
       Stock.new(
         symbol: symbol,
         overview: overview(symbol: symbol),
-        # balance_sheets: balance_sheets(symbol: symbol),
-        # cash_flow_statements: cash_flow_statements(symbol: symbol),
-        # income_statements: income_statements(symbol: symbol),
-        # time_series: time_series(symbol: symbol),
+        balance_sheets: balance_sheets(symbol: symbol),
+        cash_flow_statements: cash_flow_statements(symbol: symbol),
+        income_statements: income_statements(symbol: symbol),
+        time_series: time_series(symbol: symbol),
       )
     end
 
     private
 
     def balance_sheets(symbol:)
-      av_fundamental_data = @client.fundamental_data(symbol: symbol)
+      av_fundamental_data = av_fundamental_data(symbol: symbol)
       ensure_exists(data: av_fundamental_data)
       av_balance_sheets = av_fundamental_data.balance_sheets(period: :both)
       ensure_exists(data: av_balance_sheets)
@@ -34,7 +34,7 @@ module Adapters
     end
 
     def cash_flow_statements(symbol:)
-      av_fundamental_data = @client.fundamental_data(symbol: symbol)
+      av_fundamental_data = av_fundamental_data(symbol: symbol)
       ensure_exists(data: av_fundamental_data)
       av_cash_flow_statements = av_fundamental_data.cash_flow_statements(period: :both)
       ensure_exists(data: av_cash_flow_statements)
@@ -50,23 +50,23 @@ module Adapters
     end
 
     def income_statements(symbol:)
-      av_fundamental_data = @client.fundamental_data(symbol: symbol)
+      av_fundamental_data = av_fundamental_data(symbol: symbol)
       ensure_exists(data: av_fundamental_data)
       av_income_statements = av_fundamental_data.income_statements(period: :both)
       ensure_exists(data: av_income_statements)
 
       {
         :quarterly => transform_reports(
-                     reports: av_income_statements["quarterlyReports"],
+                     reports: av_income_statements.fetch("quarterlyReports"),
                      transform_class: IncomeStatement),
         :annually => transform_reports(
-                     reports: av_income_statements["annualReports"],
+                     reports: av_income_statements.fetch("annualReports"),
                      transform_class: IncomeStatement),
       }
     end
 
     def overview(symbol:)
-      av_fundamental_data = @client.fundamental_data(symbol: symbol)
+      av_fundamental_data = av_fundamental_data(symbol: symbol)
       ensure_exists(data: av_fundamental_data)
       av_overview = av_fundamental_data.overview
       ensure_exists(data: av_overview)
@@ -75,11 +75,13 @@ module Adapters
     end
 
     def time_series(symbol:)
-      av_stock = @client.stock symbol: symbol
-      av_time_series = av_stock.timeseries(outputsize: ENV["TIMESERIES_OUTPUT_SIZE"])
-      ensure_exists(data: av_time_series)
+      av_stock = av_stock(symbol: symbol)
+      av_time_series_dailies = av_stock.timeseries(type: "daily",
+                                                   outputsize: ENV["TIMESERIES_OUTPUT_SIZE"])
+      ensure_exists(data: av_time_series_dailies)
 
-      TimeSeries.new(time_series_dailies: transform_time_series_dailies(av_time_series: av_time_series))
+      TimeSeries.new(time_series_dailies:
+                       transform_time_series_dailies(av_time_series_dailies: av_time_series_dailies))
     end
 
     # ---------- Transform methods ----------
@@ -110,8 +112,8 @@ module Adapters
     # {
     #   date -> TimeSeriesDaily
     # }
-    def transform_time_series_dailies(av_time_series:)
-      av_time_series.output["Time Series (Daily)"].each_with_object({}) do |(date, time_series_daily), hash|
+    def transform_time_series_dailies(av_time_series_dailies:)
+      av_time_series_dailies.output["Time Series (Daily)"].each_with_object({}) do |(date, time_series_daily), hash|
         hash[date.to_date.to_s] = TimeSeriesDaily.new(
           date: date.to_date,
           open: time_series_daily["1. open"].to_f,
@@ -126,6 +128,18 @@ module Adapters
     # ---------- Helper methods ----------
     def ensure_exists(data:)
       raise AlphaVantageError if data.nil?
+    end
+
+    def av_fundamental_data(symbol:)
+      return Adapters::MockAlphaVantage::FundamentalData.new if ENV["ENABLE_MOCK_SERVICES"]
+
+      @client.fundamental_data(symbol: symbol)
+    end
+
+    def av_stock(symbol:)
+      return Adapters::MockAlphaVantage::Stock.new if ENV["ENABLE_MOCK_SERVICES"]
+
+      @client.stock(symbol: symbol)
     end
   end
 end
