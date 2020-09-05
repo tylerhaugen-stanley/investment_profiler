@@ -11,14 +11,32 @@ class Stock
     @time_series = time_series
   end
 
-  def get_all_ratios(period:, year:)
+  def get_all_ratios(year:, period:)
+    # TODO check parameter values here.
+    # ensure_exists(data: year)
+    # ensure_exists(data: period)
+    # [
+    #   {
+    #     return_on_equity,
+    #     ...
+    #   },
+    #   {
+    #     return_on_equity,
+    #     ...
+    #   },
+    # ]
 
     # get_all_ratios(year, period, period2)
     # get_all_ratios(2019, :quarterly, Q1)
     # get_all_ratios(2019, :yearly, AN)
     # get_all_ratios(nil, :ttm, nil)
 
-    # look up date based on period and year
+    return ratios_for_date(date: Date.current, period: :ttm) if period == :ttm
+
+    # This only works for :quarterly and :annually
+    search_dates(year: year, period: period).map do |date|
+      ratios_for_date(date: date, period: period)
+    end
 
     # module
     #   Q1 = 1
@@ -28,36 +46,24 @@ class Stock
     #   AN = 5
     # end
     #period, year
-
-    {
-      :return_on_equity => return_on_equity(date: date, period: period),
-      :price_to_earnings => price_to_earnings(date: date, period: period),
-      :price_to_book => price_to_book(date: date, period: period),
-      :earnings_per_share => earnings_per_share(date: date, period: period),
-      :price_to_earnings_growth => price_to_earnings_growth(date: date, period: period),
-      :price_to_sales => price_to_sales(date: date, period: period),
-      :debt_to_equity => debt_to_equity(date: date, period: period),
-      :market_cap => market_cap(date: date, period: period),
-      :retained_earnings => retained_earnings(date: date, period: period),
-      :research_and_development => research_and_development(date: date, period: period),
-      :dividend_yield => dividend_yield(date: date, period: period),
-      :dividend_payout => dividend_payout(date: date, period: period),
-      :gross_margin => gross_margin(date: date, period: period),
-      :inventory_turnover => inventory_turnover(date: date, period: period),
-    }
   end
 
   # ---------- Ratio Calculations  ----------
   def return_on_equity(date:, period:)
-    # return @overview.returnOnEquityTTM if period == :ttm
+    # Convert value to a percent
+    return @overview.return_on_equity_ttm * 100 if period == :ttm
 
     net_income = net_income(date: date, period: period)
     shareholder_equity = shareholder_equity(date: date, period: period)
 
-    net_income / shareholder_equity
+    # Convert value to a percent
+    net_income / shareholder_equity * 100
   end
 
   def price_to_earnings(date:, period:)
+    # TODO is this TTM?
+    return @overview.pe_ratio if period == :ttm
+
     eps = earnings_per_share(date: date, period: period)
     stock_price = stock_price_for_date(date: date)
 
@@ -65,6 +71,9 @@ class Stock
   end
 
   def price_to_book(date:, period:)
+    # TODO is this TTM?
+    return @overview.price_to_book_ratio if period == :ttm
+
     stock_price = stock_price_for_date(date: date)
 
     balance_sheet = balance_sheet_helper(date: date, period: period)
@@ -77,6 +86,9 @@ class Stock
   end
 
   def earnings_per_share(date:, period:)
+    # TODO is this TTM?
+    return @overview.eps if period == :ttm
+
     net_income = net_income(date: date, period: period)
     num_shares_outstanding = num_shares_outstanding(date: date, period: period)
 
@@ -90,22 +102,31 @@ class Stock
   end
 
   def price_to_sales(date:, period:)
+    return @overview.price_to_sales_ratio_ttm if period == :ttm
+
     stock_price = stock_price_for_date(date: date)
     num_shares_outstanding = num_shares_outstanding(date: date, period: period)
-    total_revenue = income_statement_helper.total_revenue
+    total_revenue = income_statement_helper(date: date, period: period).total_revenue
 
     sales_per_share = total_revenue / num_shares_outstanding
     stock_price / sales_per_share
   end
 
   def debt_to_equity(date:, period:)
-    total_liabilities = balance_sheet.total_liabilities
+    # TODO no debt to equity for ttm?
+    return nil if period == :ttm
+
+    # TODO this calculation is wrong?? Different sites give different numbers for apple's debt to equity
+    total_liabilities = balance_sheet_helper(date: date, period: period).total_liabilities
     shareholder_equity = shareholder_equity(date: date, period: period)
 
     total_liabilities / shareholder_equity
   end
 
   def market_cap(date:, period:)
+    # TODO is this TTM?
+    return @overview.market_capitalization if period == :ttm
+
     stock_price = stock_price_for_date(date: date)
     num_shares_outstanding = num_shares_outstanding(date: date, period: period)
 
@@ -113,22 +134,34 @@ class Stock
   end
 
   def retained_earnings(date:, period:)
+    # TODO no retained earnings for ttm?
+    return nil if period == :ttm
+
     balance_sheet = balance_sheet_helper(date: date, period: period)
 
     balance_sheet.retained_earnings
   end
 
   def research_and_development(date:, period:)
+    # TODO no R&D for ttm?
+    return nil if period == :ttm
+
     income_statement = income_statement_helper(date: date, period: period)
     income_statement.research_and_development
   end
 
   def dividend_yield(date:, period:)
+    # TODO is this TTM?
+    return @overview.dividend_yield if period == :ttm
+
     nil # TODO
     # dollar value of dividends paid per share / price per share
   end
 
   def dividend_payout(date:, period:)
+    # TODO no dividend payout for ttm?
+    return nil if period == :ttm
+
     cash_flow_statement = cash_flow_statement_helper(date: date, period: period)
 
     cash_flow_statement.dividend_payout
@@ -143,6 +176,8 @@ class Stock
   end
 
   def inventory_turnover(date:, period:)
+    return nil if period == :ttm
+
     income_statement = income_statement_helper(date: date, period: period)
     balance_sheet = balance_sheet_helper(date: date, period: period)
     cost_of_revenue = income_statement.cost_of_revenue
@@ -153,11 +188,62 @@ class Stock
 
   private
 
+  # ---------- Helpers  ----------
+
+  def ensure_exists(data:)
+    raise StockError if data.nil?
+  end
+
+  # Returns a list of sorted dates found within the income statements for the year and period provided
+  def search_dates(year:, period:)
+    # Income statements, cash flow statements, and balance sheets will all have the same dates
+    # within a period. Just use income statements.
+
+    # Sort the dates in DESC order
+    @income_statements[period].keys.filter {|date| date.year == year}.sort_by {|a,b| a <=> b}
+  end
+
   def stock_price_for_date(date:)
+    return nil if date == Date.current && ENV["ENABLE_MOCK_SERVICES"]
     stock_price = @time_series&.daily(date: date)&.close
-    raise StockError, "Unable to find stock price for date: #{date}" if stock_price.nil?
+
+    # It is possible that the stock price we are looking for based on the quarterly date is a weekend
+    #   To avoid this problem, search for a stock value based on the most recently previous day close
+    if stock_price.nil?
+      date -= 2.days if date.sunday?
+      date -= 1.day if date.saturday?
+
+      stock_price = @time_series&.daily(date: date)&.close
+      return stock_price unless stock_price.nil?
+
+      # Still unable to find a price for the given day, error out.
+      raise StockError, "Unable to find stock price for date: #{date}"
+    end
 
     stock_price
+  end
+
+  # I know this is weird but if the period is ttm then the date does not matter
+  def ratios_for_date(date:, period:)
+    {
+      date => {
+        :price => stock_price_for_date(date: date),
+        :return_on_equity => return_on_equity(date: date, period: period),
+        :price_to_earnings => price_to_earnings(date: date, period: period),
+        :price_to_book => price_to_book(date: date, period: period),
+        :earnings_per_share => earnings_per_share(date: date, period: period),
+        :price_to_earnings_growth => price_to_earnings_growth(date: date, period: period),
+        :price_to_sales => price_to_sales(date: date, period: period),
+        :debt_to_equity => debt_to_equity(date: date, period: period),
+        :market_cap => market_cap(date: date, period: period),
+        :retained_earnings => retained_earnings(date: date, period: period),
+        :research_and_development => research_and_development(date: date, period: period),
+        :dividend_yield => dividend_yield(date: date, period: period),
+        :dividend_payout => dividend_payout(date: date, period: period),
+        :gross_margin => gross_margin(date: date, period: period),
+        :inventory_turnover => inventory_turnover(date: date, period: period),
+      }
+    }
   end
 
   def balance_sheet_helper(date:, period:)
@@ -177,6 +263,8 @@ class Stock
   def income_statement_helper(date:, period:)
     income_statement = @income_statements.dig(period, date)
     raise StockError, "Unable to find income statement for period: #{period} & date: #{date}" if income_statement.nil?
+
+    income_statement
   end
 
   def net_income(date:, period:)

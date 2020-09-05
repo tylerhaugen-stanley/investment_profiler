@@ -90,6 +90,7 @@ module Adapters
         report = report.transform_values do |v|
           # Data returned from alpha vantage is base thousands, convert to base millions
           # Need to begin/rescue because the data is returned as strings.
+          # TODO This is not reporting none properly.
           begin
             Float(v) / 1_000.0
           rescue
@@ -98,7 +99,7 @@ module Adapters
           end
         end
 
-        hash[report["fiscalDateEnding"]] = transform_class.new(data: report)
+        hash[Date.parse(report["fiscalDateEnding"])] = transform_class.new(data: report)
       end
     end
 
@@ -114,7 +115,7 @@ module Adapters
     # }
     def transform_time_series_dailies(av_time_series_dailies:)
       av_time_series_dailies.output["Time Series (Daily)"].each_with_object({}) do |(date, time_series_daily), hash|
-        hash[date.to_date.to_s] = TimeSeriesDaily.new(
+        hash[date.to_date] = TimeSeriesDaily.new(
           date: date.to_date,
           open: time_series_daily["1. open"].to_f,
           high: time_series_daily["2. high"].to_f,
