@@ -4,42 +4,22 @@ module Builders
 
     attr_reader :csv_data
 
-    def initialize(headers)
-      @csv_data = [].append(headers)
-      @num_headers = headers.length()
+    def initialize(headers:)
+      @csv_data = [].append(transform_headers(headers: headers))
+      @header_keys = headers
     end
 
-    def add_stock_data(stock, years)
-      stock_name_row = [[stock.overview.name]]
-      left_row_padding = ["", ""]
+    def add_stock_data(stock:, years:, period:)
+      @csv_data << ["#{stock.overview.name} - (#{stock.symbol})"]
+      @csv_data << [stock.overview.industry]
+      @csv_data << [] # Add blank row
 
       years.each do |year|
-        [Util::Q1, Util::Q2, Util::Q3, Util::Q4, Util::AN].each do |period|
-          # expects that get_all_ratios returns a flat list
-          ratios = left_row_padding + stock.get_all_ratios(period, year)
-          stock_name_row.append(ratios)
+        ratios = stock.get_all_ratios(year: year, period: period)
+        ratios.each do |ratio_hash|
+          add_row(data: build_ratio_row(ratios: ratio_hash), equal_padding: 1)
         end
       end
-
-      add_rows(stock_name_row, blank_row_num: 1)
-    end
-
-    def add_row(data, blank_row_num: 0)
-      @csv_data.append(data)
-      (0...blank_row_num).each do |n|
-        @csv_data.append(blank_row)
-      end
-    end
-
-    def add_rows(data, blank_row_num: 0)
-      @csv_data = csv_data + data
-      (0...blank_row_num).each do |n|
-        @csv_data.append(blank_row)
-      end
-    end
-
-    def blank_row
-      []
     end
 
     def build()
@@ -49,6 +29,44 @@ module Builders
         end
       end
       Rails.logger.info "CSV output to file [%s]" % FILENAME
+    end
+
+    private
+
+    def build_ratio_row(ratios:)
+      # Ratios will only ever be a hash with a single key
+      date = ratios.keys.first
+      ratio_row = ['', date]
+
+      # Ignore the first two header keys since there are no ratios for those.
+      @header_keys[2..].each do |key|
+        ratio_row << ratios[date].fetch(key)
+      end
+
+      ratio_row
+    end
+
+    def add_row(data:, equal_padding: 0)
+      append_padding(amount: equal_padding)
+      @csv_data.append(data)
+      append_padding(amount: equal_padding)
+    end
+
+    def blank_row
+      []
+    end
+
+    # Transform a lowercase symbol into capitzalized words
+    def transform_headers(headers:)
+      headers.map do |header|
+        header.to_s.split('_').map(&:capitalize).join(' ')
+      end
+    end
+
+    def append_padding(amount:)
+      (0...amount).each do |n|
+        @csv_data.append(blank_row)
+      end
     end
   end
 end

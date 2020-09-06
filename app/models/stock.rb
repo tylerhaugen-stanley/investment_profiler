@@ -1,6 +1,8 @@
 class Stock
   attr_reader :symbol, :overview, :balance_sheets, :income_statements, :cash_flow_statements, :time_series
 
+  include Helpers
+
   def initialize(symbol:, overview: nil, balance_sheets: nil, income_statements: nil,
                  cash_flow_statements: nil, time_series: nil)
     @symbol = symbol
@@ -12,9 +14,8 @@ class Stock
   end
 
   def get_all_ratios(year:, period:)
-    # TODO check parameter values here.
-    # ensure_exists(data: year)
-    # ensure_exists(data: period)
+    ensure_year(year: year)
+    ensure_period(period: period)
     # [
     #   {
     #     return_on_equity,
@@ -26,30 +27,20 @@ class Stock
     #   },
     # ]
 
-    # get_all_ratios(year, period, period2)
-    # get_all_ratios(2019, :quarterly, Q1)
-    # get_all_ratios(2019, :yearly, AN)
-    # get_all_ratios(nil, :ttm, nil)
-
-    return ratios_for_date(date: Date.current, period: :ttm) if period == :ttm
+    return [ratios_for_date(date: Date.current, period: :ttm)] if period == :ttm
 
     # This only works for :quarterly and :annually
     search_dates(year: year, period: period).map do |date|
       ratios_for_date(date: date, period: period)
     end
 
-    # module
-    #   Q1 = 1
-    #   Q2 = 2
-    #   Q3 = 3
-    #   Q4 = 4
-    #   AN = 5
-    # end
-    #period, year
   end
 
   # ---------- Ratio Calculations  ----------
   def return_on_equity(date:, period:)
+    ensure_date(date: date)
+    ensure_period(period: period)
+
     # Convert value to a percent
     return @overview.return_on_equity_ttm * 100 if period == :ttm
 
@@ -61,6 +52,9 @@ class Stock
   end
 
   def price_to_earnings(date:, period:)
+    ensure_date(date: date)
+    ensure_period(period: period)
+
     # TODO is this TTM?
     return @overview.pe_ratio if period == :ttm
 
@@ -71,6 +65,9 @@ class Stock
   end
 
   def price_to_book(date:, period:)
+    ensure_date(date: date)
+    ensure_period(period: period)
+
     # TODO is this TTM?
     return @overview.price_to_book_ratio if period == :ttm
 
@@ -86,6 +83,9 @@ class Stock
   end
 
   def earnings_per_share(date:, period:)
+    ensure_date(date: date)
+    ensure_period(period: period)
+
     # TODO is this TTM?
     return @overview.eps if period == :ttm
 
@@ -96,12 +96,18 @@ class Stock
   end
 
   def price_to_earnings_growth(date:, period:)
+    ensure_date(date: date)
+    ensure_period(period: period)
+
     @overview.peg_ratio # ** This is just for the previous quarter.
     # Maybe use overview.quarterly_earnings_growth_yoy
     # price_to_earnings / earnings per share growth (Analyst growth value)
   end
 
   def price_to_sales(date:, period:)
+    ensure_date(date: date)
+    ensure_period(period: period)
+
     return @overview.price_to_sales_ratio_ttm if period == :ttm
 
     stock_price = stock_price_for_date(date: date)
@@ -113,6 +119,9 @@ class Stock
   end
 
   def debt_to_equity(date:, period:)
+    ensure_date(date: date)
+    ensure_period(period: period)
+
     # TODO no debt to equity for ttm?
     return nil if period == :ttm
 
@@ -124,6 +133,9 @@ class Stock
   end
 
   def market_cap(date:, period:)
+    ensure_date(date: date)
+    ensure_period(period: period)
+
     # TODO is this TTM?
     return @overview.market_capitalization if period == :ttm
 
@@ -134,6 +146,9 @@ class Stock
   end
 
   def retained_earnings(date:, period:)
+    ensure_date(date: date)
+    ensure_period(period: period)
+
     # TODO no retained earnings for ttm?
     return nil if period == :ttm
 
@@ -143,6 +158,9 @@ class Stock
   end
 
   def research_and_development(date:, period:)
+    ensure_date(date: date)
+    ensure_period(period: period)
+
     # TODO no R&D for ttm?
     return nil if period == :ttm
 
@@ -151,6 +169,9 @@ class Stock
   end
 
   def dividend_yield(date:, period:)
+    ensure_date(date: date)
+    ensure_period(period: period)
+
     # TODO is this TTM?
     return @overview.dividend_yield if period == :ttm
 
@@ -159,6 +180,9 @@ class Stock
   end
 
   def dividend_payout(date:, period:)
+    ensure_date(date: date)
+    ensure_period(period: period)
+
     # TODO no dividend payout for ttm?
     return nil if period == :ttm
 
@@ -168,6 +192,9 @@ class Stock
   end
 
   def gross_margin(date:, period:)
+    ensure_date(date: date)
+    ensure_period(period: period)
+
     nil # TODO
     # cogs = cost_of_revenue
     #
@@ -176,6 +203,9 @@ class Stock
   end
 
   def inventory_turnover(date:, period:)
+    ensure_date(date: date)
+    ensure_period(period: period)
+
     return nil if period == :ttm
 
     income_statement = income_statement_helper(date: date, period: period)
@@ -190,10 +220,6 @@ class Stock
 
   # ---------- Helpers  ----------
 
-  def ensure_exists(data:)
-    raise StockError if data.nil?
-  end
-
   # Returns a list of sorted dates found within the income statements for the year and period provided
   def search_dates(year:, period:)
     # Income statements, cash flow statements, and balance sheets will all have the same dates
@@ -204,6 +230,9 @@ class Stock
   end
 
   def stock_price_for_date(date:)
+    # This is a hack to deal with mock data not having the most recent data if stock_price_dor_date
+    #   gets called for a date not in the mock data. This is mainly used for creating a TTM ratio
+    #   report.
     return nil if date == Date.current && ENV["ENABLE_MOCK_SERVICES"]
     stock_price = @time_series&.daily(date: date)&.close
 
@@ -223,7 +252,6 @@ class Stock
     stock_price
   end
 
-  # I know this is weird but if the period is ttm then the date does not matter
   def ratios_for_date(date:, period:)
     {
       date => {

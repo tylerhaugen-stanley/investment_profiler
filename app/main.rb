@@ -1,69 +1,30 @@
-# require 'json'
-
-# class Main
-#     args = {
-#       "Symbol" => "MSFT",
-#       "AssetType" => "Common Stock",
-#       "Name"=> "Microsoft Corporation",
-#       "Description"=> "Microsoftn.",
-#       "Exchange"=> "NASDAQ",
-#       "Currency"=> "USD",
-#       "Country"=> "USA",
-#       "Sector"=> "Technology",
-#       "Industry"=> "SoftwareInfrastructure",
-#       "Address"=> "One Microsoft Way, Redmond, United States, 98052-6399",
-#       "FullTimeEmployees"=> "163000",
-#       "FiscalYearEnd"=> "June",
-#       "LatestQuarter"=> "2020-06-30",
-#       "MarketCapitalization"=> "1580881936384",
-#       "EBITDA"=> "65258999808",
-#       "PERatio"=> "36.2326",
-#       "PEGRatio"=> "2.4841",
-#       "BookValue"=> "15.626",
-#       "DividendPerShare"=> "2.04"}
-#
-#     api = Adapters::AlphaVantage.new
-#     stock = api.stock(symbol: "AAPL")
-#
-#     begin
-#       builder = Builders::CsvBuilder.new(["the", "headers"])
-#       builder.add_stock_data(stock, [2018, 2019])
-#       builder.build()
-#     rescue StandardError => e
-#       Rails.logger.error e.message
-#     end
-#
-# end
 class Main
-    args = {
-      "Symbol" => "MSFT",
-      "AssetType" => "Common Stock",
-      "Name"=> "Microsoft Corporation",
-      "Description"=> "Microsoftn.",
-      "Exchange"=> "NASDAQ",
-      "Currency"=> "USD",
-      "Country"=> "USA",
-      "Sector"=> "Technology",
-      "Industry"=> "SoftwareInfrastructure",
-      "Address"=> "One Microsoft Way, Redmond, United States, 98052-6399",
-      "FullTimeEmployees"=> "163000",
-      "FiscalYearEnd"=> "June",
-      "LatestQuarter"=> "2020-06-30",
-      "MarketCapitalization"=> "1580881936384",
-      "EBITDA"=> "65258999808",
-      "PERatio"=> "36.2326",
-      "PEGRatio"=> "2.4841",
-      "BookValue"=> "15.626",
-      "DividendPerShare"=> "2.04"}
+    headers = [:companies, :date, :price, :return_on_equity, :price_to_earnings, :price_to_book,
+               :earnings_per_share, :price_to_earnings_growth, :price_to_sales, :debt_to_equity,
+               :market_cap, :retained_earnings, :research_and_development, :dividend_yield,
+               :dividend_payout, :gross_margin, :inventory_turnover]
 
-    # test = Overview.new(data: args)
-    # puts test.symbol
 
-    # binding.pry
-    api = Adapters::AlphaVantage.new
-    # binding.pry
-    stock = api.stock(symbol: "AAPL")
 
     binding.pry
+    api = Adapters::AlphaVantage.new
+    stock = api.stock(symbol: "TSLA")
 
-  end
+    begin
+      builder = Builders::CsvBuilder.new(headers: headers)
+      builder.add_stock_data(stock: stock, years: [2020], period: :quarterly)
+      builder.build()
+    rescue StandardError => e
+      Rails.logger.error e.message
+    end
+
+end
+# class Main
+#     # binding.pry
+#     api = Adapters::AlphaVantage.new
+#     # binding.pry
+#     stock = api.stock(symbol: "AAPL")
+#
+#     binding.pry
+#
+#   end
