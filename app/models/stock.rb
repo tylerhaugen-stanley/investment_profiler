@@ -27,6 +27,8 @@ class Stock
     #   },
     # ]
 
+    # TODO This date needs to get the stock price on the LatestQuarter date. Assuming that
+    #   the overview information is based on the previous quarters numbers.
     return [ratios_for_date(date: Date.current, period: :ttm)] if period == :ttm
 
     # This only works for :quarterly and :annually
@@ -42,13 +44,12 @@ class Stock
     ensure_period(period: period)
 
     # Convert value to a percent
-    return @overview.return_on_equity_ttm * 100 if period == :ttm
+    return @overview.return_on_equity_ttm if period == :ttm
 
     net_income = net_income(date: date, period: period)
     shareholder_equity = shareholder_equity(date: date, period: period)
 
-    # Convert value to a percent
-    net_income / shareholder_equity * 100
+    net_income / shareholder_equity
   end
 
   def price_to_earnings(date:, period:)
@@ -233,7 +234,7 @@ class Stock
     # This is a hack to deal with mock data not having the most recent data if stock_price_dor_date
     #   gets called for a date not in the mock data. This is mainly used for creating a TTM ratio
     #   report.
-    return nil if date == Date.current && ENV["ENABLE_MOCK_SERVICES"]
+    return nil if date == Date.current && ENV["ENABLE_MOCK_SERVICES"] == "true"
     stock_price = @time_series&.daily(date: date)&.close
 
     # It is possible that the stock price we are looking for based on the quarterly date is a weekend

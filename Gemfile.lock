@@ -66,6 +66,7 @@ GEM
       tzinfo (~> 1.1)
       zeitwerk (~> 2.2, >= 2.2.2)
     ast (2.4.1)
+    awesome_print (1.8.0)
     binding_of_caller (0.8.0)
       debug_inspector (>= 0.0.1)
     bootsnap (1.4.8)
@@ -208,6 +209,7 @@ PLATFORMS
 
 DEPENDENCIES
   alphavantagerb (= 1.5.0)!
+  awesome_print (~> 1.8)
   bootsnap (>= 1.4.2)
   byebug
   dotenv (~> 2.7)

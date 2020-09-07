@@ -132,13 +132,13 @@ module Adapters
     end
 
     def av_fundamental_data(symbol:)
-      return Adapters::MockAlphaVantage::FundamentalData.new if ENV["ENABLE_MOCK_SERVICES"]
+      return Adapters::MockAlphaVantage::FundamentalData.new if ENV["ENABLE_MOCK_SERVICES"] == "true"
 
       @client.fundamental_data(symbol: symbol)
     end
 
     def av_stock(symbol:)
-      return Adapters::MockAlphaVantage::Stock.new if ENV["ENABLE_MOCK_SERVICES"]
+      return Adapters::MockAlphaVantage::Stock.new if ENV["ENABLE_MOCK_SERVICES"] == "true"
 
       @client.stock(symbol: symbol)
     end
