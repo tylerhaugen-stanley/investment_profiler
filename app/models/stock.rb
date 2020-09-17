@@ -1,17 +1,24 @@
-class Stock
-  attr_reader :symbol, :overview, :balance_sheets, :income_statements, :cash_flow_statements, :time_series
+class Stock < ActiveRecord::Base
+  # attr_reader :symbol, :overview, :balance_sheets, :income_statements, :cash_flow_statements, :time_series
 
   include Helpers
 
-  def initialize(symbol:, overview: nil, balance_sheets: nil, income_statements: nil,
-                 cash_flow_statements: nil, time_series: nil)
-    @symbol = symbol
-    @overview = overview
-    @balance_sheets = balance_sheets
-    @cash_flow_statements = cash_flow_statements
-    @income_statements = income_statements
-    @time_series = time_series
-  end
+  has_many :balance_sheets
+  has_many :cash_flow_statements
+  has_many :income_statements
+
+  has_many :overviews
+
+  validates :symbol, uniqueness: true, presence: true
+
+  # def initialize(symbol:)
+  #   @symbol = symbol
+    # @overview = overview
+    # @balance_sheets = balance_sheets
+    # @cash_flow_statements = cash_flow_statements
+    # @income_statements = income_statements
+    # @time_series = time_series
+  # end
 
   def get_all_ratios(year:, period:)
     ensure_year(year: year)

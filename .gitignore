@@ -34,7 +34,7 @@
 # Ignore local dot-env's
 .env*.local
 
-.idea
+.idea/*
 .bin
 
 # OSX

@@ -14,23 +14,25 @@ class Main
   builder = Builders::CsvBuilder.new(headers: headers)
   binding.pry
 
-  symbols.each do |symbol|
-    begin
-      stock = api.stock(symbol: symbol)
-      builder.add_stock_data(stock: stock, years: [2020], period: :ttm)
-      api_wait(seconds: 60) # TODO This will run one final time even when there are no more symbols to look at.
-    rescue StandardError => e
-      Rails.logger.error "Unable to gather stock data for #{symbol} - #{e.message}"
-      api_wait(seconds: 60) # TODO This will run one final time even when there are no more symbols to look at.
-    end
-  end
+  stock = api.fetch_data(symbol: 'AAPL')
+
+  # symbols.each do |symbol|
+  #   begin
+  #     stock = api.stock(symbol: symbol)
+  #     builder.add_stock_data(stock: stock, years: [2020], period: :ttm)
+  #     api_wait(seconds: 60) # TODO This will run one final time even when there are no more symbols to look at.
+  #   rescue StandardError => e
+  #     Rails.logger.error "Unable to gather stock data for #{symbol} - #{e.message}"
+  #     api_wait(seconds: 60) # TODO This will run one final time even when there are no more symbols to look at.
+  #   end
+  # end
 
 
-  begin
-    builder.build()
-  rescue StandardError => e
-    Rails.logger.error e.message
-  end
+  # begin
+  #   builder.build()
+  # rescue StandardError => e
+  #   Rails.logger.error e.message
+  # end
 
 
 end

@@ -1,83 +1,86 @@
 module Adapters
   class AlphaVantage
     def initialize
-      @client = Alphavantage::Client.new key: ENV["ALPHAVANTAGE_API_KEY"]
+      @client = Alphavantage::Client.new key: ENV['ALPHAVANTAGE_API_KEY']
     end
 
-    def stock(symbol:)
-      Stock.new(
-        symbol: symbol,
-        overview: overview(symbol: symbol),
-        balance_sheets: balance_sheets(symbol: symbol),
-        cash_flow_statements: cash_flow_statements(symbol: symbol),
-        income_statements: income_statements(symbol: symbol),
-        time_series: time_series(symbol: symbol),
-      )
+    def fetch_data(symbol:)
+      @av_fundamental_data = av_fundamental_data(symbol: symbol)
+      # This will lookup stock object and load in new data if it exists. If not, create stock
+      #   object and then load the data into the DB
+      stock = Stock.find_by(symbol: symbol)
+      stock = Stock.create({symbol: symbol}) unless stock
+
+      load_balance_sheets(stock_id: stock.id)
+      load_cash_flow_statements(stock_id: stock.id)
+      load_income_statements(stock_id: stock.id)
+      load_overview(stock_id: stock.id)
     end
 
     private
 
-    def balance_sheets(symbol:)
-      av_fundamental_data = av_fundamental_data(symbol: symbol)
-      ensure_exists(data: av_fundamental_data)
-      av_balance_sheets = av_fundamental_data.balance_sheets(period: :both)
+    def load_balance_sheets(stock_id:)
+      av_balance_sheets = @av_fundamental_data.balance_sheets(period: :both)
       ensure_exists(data: av_balance_sheets)
 
-      {
-        :quarterly => transform_reports(
-                     reports: av_balance_sheets["quarterlyReports"],
-                     transform_class: BalanceSheet),
-        :annually => transform_reports(
-                     reports: av_balance_sheets["annualReports"],
-                     transform_class: BalanceSheet),
-      }
+      transform_and_save_reports(
+        reports: av_balance_sheets['quarterlyReports'],
+        transform_class: BalanceSheet,
+        period: :quarterly,
+        stock_id: stock_id)
+
+      transform_and_save_reports(
+        reports: av_balance_sheets['annualReports'],
+        transform_class: BalanceSheet,
+        period: :quarterly,
+        stock_id: stock_id)
     end
 
-    def cash_flow_statements(symbol:)
-      av_fundamental_data = av_fundamental_data(symbol: symbol)
-      ensure_exists(data: av_fundamental_data)
-      av_cash_flow_statements = av_fundamental_data.cash_flow_statements(period: :both)
+    def load_cash_flow_statements(stock_id:)
+      av_cash_flow_statements = @av_fundamental_data.cash_flow_statements(period: :both)
       ensure_exists(data: av_cash_flow_statements)
 
-      {
-        :quarterly => transform_reports(
-                     reports: av_cash_flow_statements["quarterlyReports"],
-                     transform_class: CashFlowStatement),
-        :annually => transform_reports(
-                     reports: av_cash_flow_statements["annualReports"],
-                     transform_class: CashFlowStatement),
-      }
+      transform_and_save_reports(
+        reports: av_cash_flow_statements['quarterlyReports'],
+        transform_class: CashFlowStatement,
+        period: :quarterly,
+        stock_id: stock_id)
+
+      transform_and_save_reports(
+        reports: av_cash_flow_statements['annualReports'],
+        transform_class: CashFlowStatement,
+        period: :quarterly,
+        stock_id: stock_id)
     end
 
-    def income_statements(symbol:)
-      av_fundamental_data = av_fundamental_data(symbol: symbol)
-      ensure_exists(data: av_fundamental_data)
-      av_income_statements = av_fundamental_data.income_statements(period: :both)
+    def load_income_statements(stock_id:)
+      av_income_statements = @av_fundamental_data.income_statements(period: :both)
       ensure_exists(data: av_income_statements)
 
-      {
-        :quarterly => transform_reports(
-                     reports: av_income_statements.fetch("quarterlyReports"),
-                     transform_class: IncomeStatement),
-        :annually => transform_reports(
-                     reports: av_income_statements.fetch("annualReports"),
-                     transform_class: IncomeStatement),
-      }
+      transform_and_save_reports(
+        reports: av_income_statements['quarterlyReports'],
+        transform_class: IncomeStatement,
+        period: :quarterly,
+        stock_id: stock_id)
+
+      transform_and_save_reports(
+        reports: av_income_statements['annualReports'],
+        transform_class: IncomeStatement,
+        period: :quarterly,
+        stock_id: stock_id)
     end
 
-    def overview(symbol:)
-      av_fundamental_data = av_fundamental_data(symbol: symbol)
-      ensure_exists(data: av_fundamental_data)
-      av_overview = av_fundamental_data.overview
+    def load_overview(stock_id:)
+      av_overview = @av_fundamental_data.overview
       ensure_exists(data: av_overview)
 
-      transform_overview(av_overview: av_overview)
+      transform_and_save_overview(av_overview: av_overview, stock_id: stock_id)
     end
 
     def time_series(symbol:)
       av_stock = av_stock(symbol: symbol)
-      av_time_series_dailies = av_stock.timeseries(type: "daily",
-                                                   outputsize: ENV["TIMESERIES_OUTPUT_SIZE"])
+      av_time_series_dailies = av_stock.timeseries(type: 'daily',
+                                                   outputsize: ENV['TIMESERIES_OUTPUT_SIZE'])
       ensure_exists(data: av_time_series_dailies)
 
       TimeSeries.new(time_series_dailies:
@@ -85,28 +88,55 @@ module Adapters
     end
 
     # ---------- Transform methods ----------
-    def transform_reports(reports:, transform_class:)
-      reports.each_with_object({}) do |report, hash|
-        report = report.transform_values do |v|
-          # Data returned from alpha vantage is base thousands, convert to base millions
-          # Need to begin/rescue because the data is returned as strings.
-          # TODO This is not reporting none properly.
+    def transform_and_save_reports(reports:, transform_class:, period:, stock_id:)
+      reports.each do |report|
+        report.transform_keys! { |key| key.underscore.to_sym }
+        report.transform_values! do |val|
           begin
-            Float(v) / 1_000.0
+            Float(val) # All values are in base thousands.
           rescue
             # Transform any "None" value to nil
-            v unless v.downcase == "none"
+            val unless val.downcase == 'none'
           end
         end
 
-        hash[Date.parse(report["fiscalDateEnding"])] = transform_class.new(data: report)
+        # Add additional fields
+        report[:fiscal_date_ending] = Date.parse(report[:fiscal_date_ending])
+        report[:period] = period
+        report[:stock_id] = stock_id
+
+        transform_class.create(report)
       end
     end
 
-    def transform_overview(av_overview:)
-      unwanted_keys = ["52WeekHigh", "52WeekLow", "50DayMovingAverage", "200DayMovingAverage"]
+    def transform_and_save_overview(av_overview:, stock_id:)
+      # Transform the keys we need to manually change. They must remain strings so that the
+      #   following transform works.
+      av_ov erview['fifty_two_week_high'] = av_overview.delete('52WeekHigh')
+      av_overview['fifty_two_week_low'] = av_overview.delete('52WeekLow')
+      av_overview['fifty_day_moving_average'] = av_overview.delete('50DayMovingAverage')
+      av_overview['two_hundred_day_moving_average'] = av_overview.delete('200DayMovingAverage')
 
-      Overview.new(data: av_overview.except(*unwanted_keys))
+      # Make sure we make all keys underscore & symbolized after changing any manual ones or else
+      #   we can end up with weird keys.
+      av_overview.transform_keys! { |key| key.underscore.to_sym }
+
+      # Transform any "None" value to nil
+      av_overview.transform_values! do |val|
+        begin
+          Float(val)
+        rescue
+          # Transform any "None" value to nil
+          val unless val.downcase == 'none'
+        end
+      end
+
+      # Add additional fields
+      av_overview[:latest_quarter] = Date.parse(av_overview[:latest_quarter])
+      av_overview[:last_split_date] = Date.parse(av_overview[:last_split_date])
+      av_overview[:stock_id] = stock_id
+
+      Overview.create(av_overview)
     end
 
     # Output:
@@ -114,14 +144,14 @@ module Adapters
     #   date -> TimeSeriesDaily
     # }
     def transform_time_series_dailies(av_time_series_dailies:)
-      av_time_series_dailies.output["Time Series (Daily)"].each_with_object({}) do |(date, time_series_daily), hash|
+      av_time_series_dailies.output['Time Series (Daily)'].each_with_object({}) do |(date, time_series_daily), hash|
         hash[date.to_date] = TimeSeriesDaily.new(
           date: date.to_date,
-          open: time_series_daily["1. open"].to_f,
-          high: time_series_daily["2. high"].to_f,
-          low: time_series_daily["3. low"].to_f,
-          close: time_series_daily["4. close"].to_f,
-          volume: time_series_daily["5. volume"].to_i,
+          open: time_series_daily['1. open'].to_f,
+          high: time_series_daily['2. high'].to_f,
+          low: time_series_daily['3. low'].to_f,
+          close: time_series_daily['4. close'].to_f,
+          volume: time_series_daily['5. volume'].to_i,
         )
       end
     end
@@ -132,13 +162,14 @@ module Adapters
     end
 
     def av_fundamental_data(symbol:)
-      return Adapters::MockAlphaVantage::FundamentalData.new if ENV["ENABLE_MOCK_SERVICES"] == "true"
+      return Adapters::MockAlphaVantage::FundamentalData.new if ENV['ENABLE_MOCK_SERVICES'] == 'true'
+      av_fundamental_data = @client.fundamental_data(symbol: symbol)
 
-      @client.fundamental_data(symbol: symbol)
+      av_fundamental_data unless ensure_exists(data: av_fundamental_data)
     end
 
     def av_stock(symbol:)
-      return Adapters::MockAlphaVantage::Stock.new if ENV["ENABLE_MOCK_SERVICES"] == "true"
+      return Adapters::MockAlphaVantage::Stock.new if ENV['ENABLE_MOCK_SERVICES'] == 'true'
 
       @client.stock(symbol: symbol)
     end
