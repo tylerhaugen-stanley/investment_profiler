@@ -6,8 +6,10 @@ class Stock < ActiveRecord::Base
   has_many :balance_sheets
   has_many :cash_flow_statements
   has_many :income_statements
-
   has_many :overviews
+  has_many :time_series_dailies, foreign_key: :time_series_id
+
+  has_one :time_series
 
   validates :symbol, uniqueness: true, presence: true
 

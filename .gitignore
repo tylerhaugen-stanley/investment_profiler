@@ -50,3 +50,6 @@
 
 # Byebug history
 .byebug_history
+
+# CSV
+*.csv

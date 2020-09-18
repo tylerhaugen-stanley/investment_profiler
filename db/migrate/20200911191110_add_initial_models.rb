@@ -7,6 +7,23 @@ class AddInitialModels < ActiveRecord::Migration[6.0]
     end
     add_index :stocks, :symbol
 
+    create_table :time_series do |t|
+      t.integer :stock_id, unique: true, null: false
+      t.timestamps
+    end
+
+    create_table :time_series_dailies do |t|
+      t.integer :time_series_id, null: false
+      t.timestamps
+
+      t.datetime :date, unique: true
+      t.decimal :open
+      t.decimal :high
+      t.decimal :low
+      t.decimal :close
+      t.integer :volume
+    end
+
     create_table :overviews do |t|
       t.integer :stock_id, null: false
       t.timestamps
@@ -71,7 +88,6 @@ class AddInitialModels < ActiveRecord::Migration[6.0]
       t.decimal :trailing_pe
       t.decimal :two_hundred_day_moving_average
     end
-
 
     create_table :income_statements do |t|
       t.integer :stock_id, null: false

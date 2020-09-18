@@ -12,9 +12,9 @@ class Main
   symbols = Companies.symbols_to_process
   api     = Adapters::AlphaVantage.new
   builder = Builders::CsvBuilder.new(headers: headers)
-  binding.pry
 
   stock = api.fetch_data(symbol: 'AAPL')
+  binding.pry
 
   # symbols.each do |symbol|
   #   begin

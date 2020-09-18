@@ -209,4 +209,22 @@ ActiveRecord::Schema.define(version: 2020_09_11_191110) do
     t.index ["symbol"], name: "index_stocks_on_symbol"
   end
 
+  create_table "time_series", force: :cascade do |t|
+    t.integer "stock_id", null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+  end
+
+  create_table "time_series_dailies", force: :cascade do |t|
+    t.integer "time_series_id", null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.datetime "date"
+    t.decimal "open"
+    t.decimal "high"
+    t.decimal "low"
+    t.decimal "close"
+    t.integer "volume"
+  end
+
 end

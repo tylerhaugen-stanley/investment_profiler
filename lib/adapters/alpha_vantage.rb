@@ -6,15 +6,24 @@ module Adapters
 
     def fetch_data(symbol:)
       @av_fundamental_data = av_fundamental_data(symbol: symbol)
-      # This will lookup stock object and load in new data if it exists. If not, create stock
+      @av_stock = av_stock(symbol: symbol)
+      # Lookup stock object and load in new data if it exists. If not, create stock
       #   object and then load the data into the DB
       stock = Stock.find_by(symbol: symbol)
-      stock = Stock.create({symbol: symbol}) unless stock
+      stock = Stock.new.tap do |stock|
+        stock.symbol = symbol
+        stock.time_series = TimeSeries.create({stock_id: stock.id})
+
+        stock.save
+      end unless stock
 
       load_balance_sheets(stock_id: stock.id)
       load_cash_flow_statements(stock_id: stock.id)
       load_income_statements(stock_id: stock.id)
       load_overview(stock_id: stock.id)
+      load_time_series_dailies(time_series_id: stock.time_series.id)
+
+      stock
     end
 
     private
@@ -77,14 +86,13 @@ module Adapters
       transform_and_save_overview(av_overview: av_overview, stock_id: stock_id)
     end
 
-    def time_series(symbol:)
-      av_stock = av_stock(symbol: symbol)
-      av_time_series_dailies = av_stock.timeseries(type: 'daily',
+    def load_time_series_dailies(time_series_id:)
+      av_time_series_dailies = @av_stock.timeseries(type: 'daily',
                                                    outputsize: ENV['TIMESERIES_OUTPUT_SIZE'])
       ensure_exists(data: av_time_series_dailies)
 
-      TimeSeries.new(time_series_dailies:
-                       transform_time_series_dailies(av_time_series_dailies: av_time_series_dailies))
+      transform_and_save_time_series_dailies(av_time_series_dailies: av_time_series_dailies,
+                                             time_series_id: time_series_id)
     end
 
     # ---------- Transform methods ----------
@@ -112,7 +120,7 @@ module Adapters
     def transform_and_save_overview(av_overview:, stock_id:)
       # Transform the keys we need to manually change. They must remain strings so that the
       #   following transform works.
-      av_ov erview['fifty_two_week_high'] = av_overview.delete('52WeekHigh')
+      av_overview['fifty_two_week_high'] = av_overview.delete('52WeekHigh')
       av_overview['fifty_two_week_low'] = av_overview.delete('52WeekLow')
       av_overview['fifty_day_moving_average'] = av_overview.delete('50DayMovingAverage')
       av_overview['two_hundred_day_moving_average'] = av_overview.delete('200DayMovingAverage')
@@ -139,20 +147,19 @@ module Adapters
       Overview.create(av_overview)
     end
 
-    # Output:
-    # {
-    #   date -> TimeSeriesDaily
-    # }
-    def transform_time_series_dailies(av_time_series_dailies:)
-      av_time_series_dailies.output['Time Series (Daily)'].each_with_object({}) do |(date, time_series_daily), hash|
-        hash[date.to_date] = TimeSeriesDaily.new(
-          date: date.to_date,
+    def transform_and_save_time_series_dailies(av_time_series_dailies:, time_series_id:)
+      av_time_series_dailies.output['Time Series (Daily)'].each do |date, time_series_daily|
+        data = {
+          time_series_id: time_series_id,
+          date: Date.parse(date),
           open: time_series_daily['1. open'].to_f,
           high: time_series_daily['2. high'].to_f,
           low: time_series_daily['3. low'].to_f,
           close: time_series_daily['4. close'].to_f,
           volume: time_series_daily['5. volume'].to_i,
-        )
+        }
+
+        TimeSeriesDaily.create(data)
       end
     end
 
@@ -163,9 +170,8 @@ module Adapters
 
     def av_fundamental_data(symbol:)
       return Adapters::MockAlphaVantage::FundamentalData.new if ENV['ENABLE_MOCK_SERVICES'] == 'true'
-      av_fundamental_data = @client.fundamental_data(symbol: symbol)
 
-      av_fundamental_data unless ensure_exists(data: av_fundamental_data)
+      @client.fundamental_data(symbol: symbol)
     end
 
     def av_stock(symbol:)
