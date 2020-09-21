@@ -16,7 +16,8 @@ class AddInitialModels < ActiveRecord::Migration[6.0]
       t.integer :time_series_id, null: false
       t.timestamps
 
-      t.datetime :date, unique: true
+      # Want to add uniqness check here for time_series_id AND date, not sure how to do that.
+      t.datetime :date
       t.decimal :open
       t.decimal :high
       t.decimal :low

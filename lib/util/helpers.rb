@@ -4,7 +4,7 @@ module Helpers
   end
 
   def ensure_date(date:)
-    raise StandardError "Unsupported date #{date}" unless date.class == Date
+    raise StandardError "Unsupported date #{date}" unless date.class == Date || date.class == ActiveSupport::TimeWithZone
   end
 
   def ensure_year(year:)

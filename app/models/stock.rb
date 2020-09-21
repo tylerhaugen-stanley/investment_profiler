@@ -13,15 +13,6 @@ class Stock < ActiveRecord::Base
 
   validates :symbol, uniqueness: true, presence: true
 
-  # def initialize(symbol:)
-  #   @symbol = symbol
-    # @overview = overview
-    # @balance_sheets = balance_sheets
-    # @cash_flow_statements = cash_flow_statements
-    # @income_statements = income_statements
-    # @time_series = time_series
-  # end
-
   def get_all_ratios(year:, period:)
     ensure_year(year: year)
     ensure_period(period: period)
@@ -53,7 +44,7 @@ class Stock < ActiveRecord::Base
     ensure_period(period: period)
 
     # Convert value to a percent
-    return @overview.return_on_equity_ttm if period == :ttm
+    return self.overviews.last.return_on_equity_ttm if period == :ttm
 
     net_income = net_income(date: date, period: period)
     shareholder_equity = shareholder_equity(date: date, period: period)
@@ -66,7 +57,7 @@ class Stock < ActiveRecord::Base
     ensure_period(period: period)
 
     # TODO is this TTM?
-    return @overview.pe_ratio if period == :ttm
+    return self.overviews.last.pe_ratio if period == :ttm
 
     eps = earnings_per_share(date: date, period: period)
     stock_price = stock_price_for_date(date: date)
@@ -79,7 +70,7 @@ class Stock < ActiveRecord::Base
     ensure_period(period: period)
 
     # TODO is this TTM?
-    return @overview.price_to_book_ratio if period == :ttm
+    return self.overviews.last.price_to_book_ratio if period == :ttm
 
     stock_price = stock_price_for_date(date: date)
 
@@ -97,7 +88,7 @@ class Stock < ActiveRecord::Base
     ensure_period(period: period)
 
     # TODO is this TTM?
-    return @overview.eps if period == :ttm
+    return self.overviews.last.eps if period == :ttm
 
     net_income = net_income(date: date, period: period)
     num_shares_outstanding = num_shares_outstanding(date: date, period: period)
@@ -109,7 +100,7 @@ class Stock < ActiveRecord::Base
     ensure_date(date: date)
     ensure_period(period: period)
 
-    @overview.peg_ratio # ** This is just for the previous quarter.
+    self.overviews.last.peg_ratio # ** This is just for the previous quarter.
     # Maybe use overview.quarterly_earnings_growth_yoy
     # price_to_earnings / earnings per share growth (Analyst growth value)
   end
@@ -118,7 +109,7 @@ class Stock < ActiveRecord::Base
     ensure_date(date: date)
     ensure_period(period: period)
 
-    return @overview.price_to_sales_ratio_ttm if period == :ttm
+    return self.overviews.last.price_to_sales_ratio_ttm if period == :ttm
 
     stock_price = stock_price_for_date(date: date)
     num_shares_outstanding = num_shares_outstanding(date: date, period: period)
@@ -147,7 +138,7 @@ class Stock < ActiveRecord::Base
     ensure_period(period: period)
 
     # TODO is this TTM?
-    return @overview.market_capitalization if period == :ttm
+    return self.overviews.last.market_capitalization if period == :ttm
 
     stock_price = stock_price_for_date(date: date)
     num_shares_outstanding = num_shares_outstanding(date: date, period: period)
@@ -183,7 +174,7 @@ class Stock < ActiveRecord::Base
     ensure_period(period: period)
 
     # TODO is this TTM?
-    return @overview.dividend_yield if period == :ttm
+    return self.overviews.last.dividend_yield if period == :ttm
 
     nil # TODO
     # dollar value of dividends paid per share / price per share
@@ -236,15 +227,18 @@ class Stock < ActiveRecord::Base
     # within a period. Just use income statements.
 
     # Sort the dates in DESC order
-    @income_statements[period].keys.filter {|date| date.year == year}.sort_by {|a,b| a <=> b}
+    self.income_statements.where(period: period).select do |income_statement|
+      income_statement.fiscal_date_ending.year == year
+    end.pluck(:fiscal_date_ending).sort_by {|a,b| a <=> b }
+    # statements.pluck(:fiscal_date_ending).sort_by {|a,b| a <=> b }
   end
 
   def stock_price_for_date(date:)
-    # This is a hack to deal with mock data not having the most recent data if stock_price_dor_date
+    # This is a hack to deal with mock data not having the most recent data if stock_price_for_date
     #   gets called for a date not in the mock data. This is mainly used for creating a TTM ratio
     #   report.
-    return nil if date == Date.current && ENV["ENABLE_MOCK_SERVICES"] == "true"
-    stock_price = @time_series&.daily(date: date)&.close
+    return nil if date == Date.current && ENV['ENABLE_MOCK_SERVICES'] == 'true'
+    stock_price = self.time_series_dailies.find_by(date: date)&.close
 
     # It is possible that the stock price we are looking for based on the quarterly date is a weekend
     #   To avoid this problem, search for a stock value based on the most recently previous day close
@@ -252,7 +246,7 @@ class Stock < ActiveRecord::Base
       date -= 2.days if date.sunday?
       date -= 1.day if date.saturday?
 
-      stock_price = @time_series&.daily(date: date)&.close
+      stock_price = self.time_series_dailies.find_by(date: date)&.close
       return stock_price unless stock_price.nil?
 
       # Still unable to find a price for the given day, error out.
@@ -263,6 +257,8 @@ class Stock < ActiveRecord::Base
   end
 
   def ratios_for_date(date:, period:)
+    # TODO maybe make a ratios model??
+    # TODO Some of these are being converted to an int when they should be a float.
     {
       date => {
         :price => stock_price_for_date(date: date),
@@ -285,21 +281,21 @@ class Stock < ActiveRecord::Base
   end
 
   def balance_sheet_helper(date:, period:)
-    balance_sheet = @balance_sheets.dig(period, date)
+    balance_sheet = self.balance_sheets.find_by(fiscal_date_ending: date, period: period)
     raise StockError, "Unable to find balance sheet for period: #{period} & date: #{date}" if balance_sheet.nil?
 
     balance_sheet
   end
 
   def cash_flow_statement_helper(date:, period:)
-    cash_flow_statement = @cash_flow_statements.dig(period, date)
+    cash_flow_statement = self.cash_flow_statements.find_by(fiscal_date_ending: date, period: period)
     raise StockError, "Unable to find cash flow statement for period: #{period} & date: #{date}" if cash_flow_statement.nil?
 
     cash_flow_statement
   end
 
   def income_statement_helper(date:, period:)
-    income_statement = @income_statements.dig(period, date)
+    income_statement = self.income_statements.find_by(fiscal_date_ending: date, period: period)
     raise StockError, "Unable to find income statement for period: #{period} & date: #{date}" if income_statement.nil?
 
     income_statement

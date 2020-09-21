@@ -5,6 +5,8 @@ class IncomeStatement < ActiveRecord::Base
   validates :stock_id, presence: true
   validates :period, presence: true
 
+  validates_uniqueness_of :fiscal_date_ending, scope: [:stock_id, :period]
+
   # CLASS_FIELDS = ["cost_of_revenue", "discontinued_operations", "ebit",
   #                 "effect_of_accounting_charges", "extraordinary_items", "fiscal_date_ending",
   #                 "gross_profit", "income_before_tax", "income_tax_expense", "interest_expense",

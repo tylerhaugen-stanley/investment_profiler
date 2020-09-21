@@ -36,7 +36,7 @@ group :development do
   gem 'spring'
   gem 'spring-watcher-listen', '~> 2.0.0'
 
-  gem 'dotenv', '~> 2.7'
+  gem "dotenv-rails", "~> 2.7"
 
   # So you don't have to recompile ruby to get readline support
   # This means it'll be easier to get cmd history on new pry sessions

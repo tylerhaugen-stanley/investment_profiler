@@ -4,9 +4,8 @@
 #   ran into this with UAT1/2
 # TODO why does dotenv not loan my .env.development.local file?
 require 'dotenv'
-Dotenv.load('.env.development.local', '.env')
-# Dotenv.load
-
+# Dotenv.load('.env.development.local', '.env')
+Dotenv.load
 
 
 # Load the Rails application.

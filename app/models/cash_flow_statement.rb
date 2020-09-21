@@ -5,6 +5,8 @@ class CashFlowStatement < ActiveRecord::Base
   validates :stock_id, presence: true
   validates :period, presence: true
 
+  validates_uniqueness_of :fiscal_date_ending, scope: [:stock_id, :period]
+
   # CLASS_FIELDS = ["capital_expenditures", "cashflow_from_financing", "cashflow_from_investment",
   #                 "change_in_account_receivables", "change_in_cash",
   #                 "change_in_cash_and_cash_equivalents", "change_in_exchange_rate",

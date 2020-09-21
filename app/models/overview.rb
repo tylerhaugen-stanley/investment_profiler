@@ -4,6 +4,8 @@ class Overview < ActiveRecord::Base
 
   validates :stock_id, presence: true
 
+  validates_uniqueness_of :latest_quarter, scope: [:stock_id]
+
 #   # Any time specific date in this class is the most recent calculation.
 #   CLASS_FIELDS = ["address", "analyst_target_price", "asset_type", "beta", "book_value", "country",
 #                   "currency", "description", "diluted_epsttm", "dividend_date",

@@ -34,5 +34,11 @@ module RatiosGenerator
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    if ENV['QUIET_LOGS'] == 'true'
+      # Make logs quieter
+      config.log_level = :info
+      config.action_view.logger = nil
+    end
   end
 end

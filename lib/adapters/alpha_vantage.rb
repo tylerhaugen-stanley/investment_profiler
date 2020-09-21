@@ -41,7 +41,7 @@ module Adapters
       transform_and_save_reports(
         reports: av_balance_sheets['annualReports'],
         transform_class: BalanceSheet,
-        period: :quarterly,
+        period: :yearly,
         stock_id: stock_id)
     end
 
@@ -58,7 +58,7 @@ module Adapters
       transform_and_save_reports(
         reports: av_cash_flow_statements['annualReports'],
         transform_class: CashFlowStatement,
-        period: :quarterly,
+        period: :yearly,
         stock_id: stock_id)
     end
 
@@ -75,7 +75,7 @@ module Adapters
       transform_and_save_reports(
         reports: av_income_statements['annualReports'],
         transform_class: IncomeStatement,
-        period: :quarterly,
+        period: :yearly,
         stock_id: stock_id)
     end
 

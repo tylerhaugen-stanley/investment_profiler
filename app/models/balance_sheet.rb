@@ -5,6 +5,8 @@ class BalanceSheet < ActiveRecord::Base
   validates :stock_id, presence: true
   validates :period, presence: true
 
+  validates_uniqueness_of :fiscal_date_ending, scope: [:stock_id, :period]
+
   # CLASS_FIELDS = ["accounts_payable", "accumulated_amortization", "accumulated_depreciation",
   #                 "additional_paid_in_capital", "capital_lease_obligations", "capital_surplus",
   #                 "cash", "cash_and_short_term_investments", "common_stock",
