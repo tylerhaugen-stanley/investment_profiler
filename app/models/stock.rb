@@ -29,7 +29,8 @@ class Stock < ActiveRecord::Base
 
     # TODO This date needs to get the stock price on the LatestQuarter date. Assuming that
     #   the overview information is based on the previous quarters numbers.
-    return [ratios_for_date(date: Date.current, period: :ttm)] if period == :ttm
+    date = self.overviews.last.latest_quarter
+    return [ratios_for_date(date: date, period: :ttm)] if period == :ttm
 
     # This only works for :quarterly and :annually
     search_dates(year: year, period: period).map do |date|
@@ -59,8 +60,8 @@ class Stock < ActiveRecord::Base
     # TODO is this TTM?
     return self.overviews.last.pe_ratio if period == :ttm
 
-    eps = earnings_per_share(date: date, period: period)
     stock_price = stock_price_for_date(date: date)
+    eps = earnings_per_share(date: date, period: period)
 
     stock_price / eps
   end
@@ -73,7 +74,6 @@ class Stock < ActiveRecord::Base
     return self.overviews.last.price_to_book_ratio if period == :ttm
 
     stock_price = stock_price_for_date(date: date)
-
     balance_sheet = balance_sheet_helper(date: date, period: period)
     total_assets = balance_sheet.total_assets
     total_liabilities = balance_sheet.total_liabilities
@@ -126,7 +126,6 @@ class Stock < ActiveRecord::Base
     # TODO no debt to equity for ttm?
     return nil if period == :ttm
 
-    # TODO this calculation is wrong?? Different sites give different numbers for apple's debt to equity
     total_liabilities = balance_sheet_helper(date: date, period: period).total_liabilities
     shareholder_equity = shareholder_equity(date: date, period: period)
 
@@ -153,9 +152,7 @@ class Stock < ActiveRecord::Base
     # TODO no retained earnings for ttm?
     return nil if period == :ttm
 
-    balance_sheet = balance_sheet_helper(date: date, period: period)
-
-    balance_sheet.retained_earnings
+    balance_sheet_helper(date: date, period: period).retained_earnings
   end
 
   def research_and_development(date:, period:)
@@ -165,8 +162,7 @@ class Stock < ActiveRecord::Base
     # TODO no R&D for ttm?
     return nil if period == :ttm
 
-    income_statement = income_statement_helper(date: date, period: period)
-    income_statement.research_and_development
+    income_statement_helper(date: date, period: period).research_and_development
   end
 
   def dividend_yield(date:, period:)
@@ -176,8 +172,15 @@ class Stock < ActiveRecord::Base
     # TODO is this TTM?
     return self.overviews.last.dividend_yield if period == :ttm
 
-    nil # TODO
-    # dollar value of dividends paid per share / price per share
+    dividend_payout = cash_flow_statement_helper(date: date, period: period).dividend_payout.abs
+    return 0 unless dividend_payout
+
+    num_shares_outstanding = num_shares_outstanding(date: date, period: period)
+    stock_price = stock_price_for_date(date: date)
+
+    dividend_payout_per_share = dividend_payout / num_shares_outstanding
+
+    dividend_payout_per_share / stock_price
   end
 
   def dividend_payout(date:, period:)
@@ -187,20 +190,21 @@ class Stock < ActiveRecord::Base
     # TODO no dividend payout for ttm?
     return nil if period == :ttm
 
-    cash_flow_statement = cash_flow_statement_helper(date: date, period: period)
-
-    cash_flow_statement.dividend_payout
+    cash_flow_statement_helper(date: date, period: period).dividend_payout
   end
 
   def gross_margin(date:, period:)
     ensure_date(date: date)
     ensure_period(period: period)
 
-    nil # TODO
-    # cogs = cost_of_revenue
-    #
-    # net_sales = total_revenue
-    # net sales - cost of goods sold
+    # TODO TTM calc.
+
+    income_statement = income_statement_helper(date: date, period: period)
+    cost_of_goods_sold = income_statement.cost_of_revenue
+    net_sales = income_statement.total_revenue
+
+    # One of these needs to be a float, arbitrarily picked cost of goods sold.
+    net_sales - cost_of_goods_sold.to_f
   end
 
   def inventory_turnover(date:, period:)
@@ -305,7 +309,7 @@ class Stock < ActiveRecord::Base
     net_income = income_statement_helper(date: date, period: period).net_income
     raise StockError, "Unable to get net income. Period: #{period} & date: #{date}" if net_income.nil?
 
-    net_income
+    net_income.to_f
   end
 
   def num_shares_outstanding(date:, period:)
@@ -313,7 +317,7 @@ class Stock < ActiveRecord::Base
     num_shares_outstanding = balance_sheet.common_stock_shares_outstanding
     raise StockError, "Unable to get num shares outstanding. Period: #{period} & date: #{date}" if num_shares_outstanding.nil?
 
-    num_shares_outstanding
+    num_shares_outstanding.to_f
   end
 
   def shareholder_equity(date:, period:)
@@ -321,7 +325,7 @@ class Stock < ActiveRecord::Base
     shareholder_equity = balance_sheet.total_shareholder_equity
     raise StockError, "Unable to get shareholder equity. Period: #{period} & date: #{date}" if shareholder_equity.nil?
 
-    shareholder_equity
+    shareholder_equity.to_f
   end
 end
 
