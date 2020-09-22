@@ -172,7 +172,8 @@ class Stock < ActiveRecord::Base
     # TODO is this TTM?
     return self.overviews.last.dividend_yield if period == :ttm
 
-    dividend_payout = cash_flow_statement_helper(date: date, period: period).dividend_payout.abs
+    binding.pry
+    dividend_payout = cash_flow_statement_helper(date: date, period: period).dividend_payout&.abs
     return 0 unless dividend_payout
 
     num_shares_outstanding = num_shares_outstanding(date: date, period: period)
@@ -213,10 +214,9 @@ class Stock < ActiveRecord::Base
 
     return nil if period == :ttm
 
-    income_statement = income_statement_helper(date: date, period: period)
-    balance_sheet = balance_sheet_helper(date: date, period: period)
-    cost_of_revenue = income_statement.cost_of_revenue
-    inventory = balance_sheet.inventory
+    cost_of_revenue = income_statement_helper(date: date, period: period).cost_of_revenue
+    inventory = balance_sheet_helper(date: date, period: period).inventory
+    return nil if inventory.nil?
 
     cost_of_revenue / inventory
   end
@@ -262,7 +262,6 @@ class Stock < ActiveRecord::Base
 
   def ratios_for_date(date:, period:)
     # TODO maybe make a ratios model??
-    # TODO Some of these are being converted to an int when they should be a float.
     {
       date => {
         :price => stock_price_for_date(date: date),

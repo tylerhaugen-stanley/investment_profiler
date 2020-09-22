@@ -41,7 +41,7 @@ module Adapters
       transform_and_save_reports(
         reports: av_balance_sheets['annualReports'],
         transform_class: BalanceSheet,
-        period: :yearly,
+        period: :annually,
         stock_id: stock_id)
     end
 
@@ -58,7 +58,7 @@ module Adapters
       transform_and_save_reports(
         reports: av_cash_flow_statements['annualReports'],
         transform_class: CashFlowStatement,
-        period: :yearly,
+        period: :annually,
         stock_id: stock_id)
     end
 
@@ -75,7 +75,7 @@ module Adapters
       transform_and_save_reports(
         reports: av_income_statements['annualReports'],
         transform_class: IncomeStatement,
-        period: :yearly,
+        period: :annually,
         stock_id: stock_id)
     end
 
@@ -141,7 +141,7 @@ module Adapters
 
       # Add additional fields
       av_overview[:latest_quarter] = Date.parse(av_overview[:latest_quarter])
-      av_overview[:last_split_date] = Date.parse(av_overview[:last_split_date])
+      av_overview[:last_split_date] = Date.parse(av_overview[:last_split_date]) unless av_overview[:last_split_date].nil?
       av_overview[:stock_id] = stock_id
 
       Overview.create(av_overview)
@@ -165,7 +165,7 @@ module Adapters
 
     # ---------- Helper methods ----------
     def ensure_exists(data:)
-      raise AlphaVantageError if data.nil?
+      raise AlphaVantageError if data.nil? || !data.present?
     end
 
     def av_fundamental_data(symbol:)

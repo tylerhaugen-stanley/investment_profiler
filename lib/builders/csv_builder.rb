@@ -10,8 +10,9 @@ module Builders
     end
 
     def add_stock_data(stock:, years:, period:)
-      @csv_data << ["#{stock.overview.name} - (#{stock.symbol})"]
-      @csv_data << [stock.overview.industry]
+      overview = stock.overviews.last
+      @csv_data << ["#{overview.name} - (#{stock.symbol})"]
+      @csv_data << [overview.industry]
       @csv_data << [] # Add blank row
 
       years.each do |year|
