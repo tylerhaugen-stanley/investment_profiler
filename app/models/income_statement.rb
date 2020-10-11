@@ -1,4 +1,4 @@
-class IncomeStatement < ActiveRecord::Base
+class IncomeStatement < ApplicationRecord
 
   belongs_to :stock, foreign_key: :stock_id
 
@@ -7,30 +7,11 @@ class IncomeStatement < ActiveRecord::Base
 
   validates_uniqueness_of :fiscal_date_ending, scope: [:stock_id, :period]
 
-  # CLASS_FIELDS = ["cost_of_revenue", "discontinued_operations", "ebit",
-  #                 "effect_of_accounting_charges", "extraordinary_items", "fiscal_date_ending",
-  #                 "gross_profit", "income_before_tax", "income_tax_expense", "interest_expense",
-  #                 "interest_income", "minority_interest", "net_income",
-  #                 "net_income_applicable_to_common_shares",
-  #                 "net_income_from_continuing_operations", "net_interest_income", "non_recurring",
-  #                 "operating_income", "other_items", "other_non_operating_income",
-  #                 "other_operating_expense", "preferred_stock_and_other_adjustments",
-  #                 "reported_currency", "research_and_development",
-  #                 "selling_general_administrative", "tax_provision", "total_operating_expense",
-  #                 "total_other_income_expense", "total_revenue"]
-  #
-  # CLASS_FIELDS.map do |field|
-  #   attr_reader field
-  # end
-  #
-  # def initialize(data:)
-  #   data.each do |k,v|
-  #     err = "Received a key during initialization that is not supported. Key: #{k}"
-  #     raise IncomeStatementError, err unless CLASS_FIELDS.include?(k.underscore)
-  #
-  #     instance_variable_set("@#{k.underscore}", v.to_f)
-  #   end
-  # end
-end
+  # Use 2 years ago to ensure we get the last 4 since we don't know what date this will be called with.
+  # Also buffer the end date to ensure we get what we expect. Using Date vs DateTime with the date
+  # being exactly a quater was resulting in the current quarter not being returned with Date and
+  # it being returned with DateTime.
+  scope :last_4, -> (date, period) { where(fiscal_date_ending: 2.years.ago(date)..1.day.since(date), period: period).order(fiscal_date_ending: :desc).limit(4) }
+  scope :last_n, -> (date, period, num) { where(fiscal_date_ending: 2.years.ago(date)..1.day.since(date), period: period).order(fiscal_date_ending: :desc).limit(num) }
 
-# class IncomeStatementError < StandardError; end
+end

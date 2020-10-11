@@ -1,4 +1,4 @@
-class TimeSeries < ActiveRecord::Base
+class TimeSeries < ApplicationRecord
 
   self.table_name = 'time_series'
 
@@ -8,11 +8,4 @@ class TimeSeries < ActiveRecord::Base
 
   validates :stock_id, uniqueness: true, presence: true
 
-  # def initialize(time_series_dailies:)
-  #   @dailies = time_series_dailies
-  # end
-  #
-  # def daily(date:)
-  #   @dailies[date]
-  # end
 end

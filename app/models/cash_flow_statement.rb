@@ -1,4 +1,4 @@
-class CashFlowStatement < ActiveRecord::Base
+class CashFlowStatement < ApplicationRecord
 
   belongs_to :stock, foreign_key: :stock_id
 
@@ -7,28 +7,8 @@ class CashFlowStatement < ActiveRecord::Base
 
   validates_uniqueness_of :fiscal_date_ending, scope: [:stock_id, :period]
 
-  # CLASS_FIELDS = ["capital_expenditures", "cashflow_from_financing", "cashflow_from_investment",
-  #                 "change_in_account_receivables", "change_in_cash",
-  #                 "change_in_cash_and_cash_equivalents", "change_in_exchange_rate",
-  #                 "change_in_inventory", "change_in_liabilities", "change_in_net_income",
-  #                 "change_in_operating_activities", "change_in_receivables", "depreciation",
-  #                 "dividend_payout", "fiscal_date_ending", "investments", "net_borrowings",
-  #                 "net_income", "operating_cashflow", "other_cashflow_from_financing",
-  #                 "other_cashflow_from_investment", "other_operating_cashflow",
-  #                 "reported_currency", "stock_sale_and_purchase"]
-  #
-  # CLASS_FIELDS.map do |field|
-  #   attr_reader field
-  # end
-  #
-  # def initialize(data:)
-  #   data.each do |k,v|
-  #     err = "Received a key during initialization that is not supported. Key: #{k}"
-  #     raise CashFlowError, err unless CLASS_FIELDS.include?(k.underscore)
-  #
-  #     instance_variable_set("@#{k.underscore}", v.to_f)
-  #   end
-  # end
-end
+  # Use 2 years ago to ensure we get the last 4 since we don't know what date this will be called with.
+  scope :last_4, -> (date, period) { where(fiscal_date_ending: 2.years.ago(date)..1.day.since(date), period: period).order(fiscal_date_ending: :desc).limit(4) }
+  scope :last_n, -> (date, period, num) { where(fiscal_date_ending: 2.years.ago(date)..1.day.since(date), period: period).order(fiscal_date_ending: :desc).limit(num) }
 
-# class CashFlowError < StandardError; end
+end

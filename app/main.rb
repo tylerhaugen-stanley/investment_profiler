@@ -12,10 +12,10 @@ class Main
     # Fetch data
     SYMBOLS.each do |symbol|
       begin
+        puts "Fetching data for: #{symbol}"
         api.fetch_data(symbol: symbol)
         api_wait(seconds: 60) # TODO This will run one final time even when there are no more symbols to look at.
       rescue StandardError => e
-        binding.pry
         failed_symbols << symbol
         Rails.logger.error "Unable to gather stock data for #{symbol} - #{e.message} \n #{e.backtrace}"
         api_wait(seconds: 60) # TODO This will run one final time even when there are no more symbols to look at.
@@ -33,10 +33,12 @@ class Main
 
     builder = Builders::CsvBuilder.new(headers: headers)
 
-    SYMBOLS.each do |symbol|
+    categorized_companies = categorize_companies(companies: SYMBOLS)
+
+    categorized_companies.each do |symbol|
       begin
         stock = Stock.find_by(symbol: symbol)
-        builder.add_stock_data(stock: stock, years: [2019, 2020], period: :quarterly)
+        builder.add_stock_data(stock: stock, years: [2020], period: :ttm)
       rescue StandardError => e
         Rails.logger.error "Unable to add stock data to csv builder for #{symbol} - #{e.message} \n #{e.backtrace}"
       end
@@ -47,6 +49,21 @@ class Main
     rescue StandardError => e
       Rails.logger.error e.message
     end
+  end
+
+  def self.categorize_companies(companies:)
+
+    industry_mapping = {}
+
+    companies.each do |symbol|
+      overview = Stock.find_by(symbol: symbol).overviews.newest
+      industry = overview.industry
+
+      industry_mapping[industry].append(symbol) if industry_mapping.has_key?(industry)
+      industry_mapping[industry] = [symbol] unless industry_mapping.has_key?(industry)
+    end
+
+    industry_mapping.values.flatten
   end
 end
 

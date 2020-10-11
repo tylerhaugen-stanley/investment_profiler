@@ -1,6 +1,4 @@
-class Stock < ActiveRecord::Base
-  # attr_reader :symbol, :overview, :balance_sheets, :income_statements, :cash_flow_statements, :time_series
-
+class Stock < ApplicationRecord
   include Helpers
 
   has_many :balance_sheets
@@ -27,9 +25,10 @@ class Stock < ActiveRecord::Base
     #   },
     # ]
 
-    # TODO This date needs to get the stock price on the LatestQuarter date. Assuming that
-    #   the overview information is based on the previous quarters numbers.
-    date = self.overviews.last.latest_quarter
+    # TODO This date needs to get the stock price on the LatestQuarter date.
+    #   The overview information is based on current information unless noted otherwise
+    #   EX: 'return_on_equity_ttm', note the 'ttm' part.
+    date = self.overviews.newest.latest_quarter
     return [ratios_for_date(date: date, period: :ttm)] if period == :ttm
 
     # This only works for :quarterly and :annually
@@ -44,8 +43,17 @@ class Stock < ActiveRecord::Base
     ensure_date(date: date)
     ensure_period(period: period)
 
-    # Convert value to a percent
-    return self.overviews.last.return_on_equity_ttm if period == :ttm
+    if period == :ttm
+      sum_shareholder_equity = 0
+
+      self.balance_sheets.last_n(date, :quarterly, 5).each do |balance_sheet|
+        sum_shareholder_equity += balance_sheet.total_shareholder_equity
+      end
+
+      sum_net_income = net_income_ttm(date: date)
+
+      return sum_net_income / (sum_shareholder_equity / 5).to_f
+    end
 
     net_income = net_income(date: date, period: period)
     shareholder_equity = shareholder_equity(date: date, period: period)
@@ -57,9 +65,8 @@ class Stock < ActiveRecord::Base
     ensure_date(date: date)
     ensure_period(period: period)
 
-    # TODO is this TTM?
-    return self.overviews.last.pe_ratio if period == :ttm
-
+    # Stock price does not change based on period and the earnings_per_share function knows
+    # how to calculate itself based on period, hence there is no need for specific TTM logic.
     stock_price = stock_price_for_date(date: date)
     eps = earnings_per_share(date: date, period: period)
 
@@ -69,11 +76,22 @@ class Stock < ActiveRecord::Base
   def price_to_book(date:, period:)
     ensure_date(date: date)
     ensure_period(period: period)
-
-    # TODO is this TTM?
-    return self.overviews.last.price_to_book_ratio if period == :ttm
-
     stock_price = stock_price_for_date(date: date)
+
+    if period == :ttm
+      sum_total_assets = 0
+      sum_total_liabilities = 0
+      num_shares_outstanding_ttm = num_shares_outstanding_ttm(date: date)
+
+      self.balance_sheets.last_4(date, :quarterly).each do |balance_sheet|
+        sum_total_assets += balance_sheet.total_assets
+        sum_total_liabilities += balance_sheet.total_liabilities
+      end
+
+      book_value_ttm = (sum_total_assets - sum_total_liabilities) / num_shares_outstanding_ttm
+      return stock_price / book_value_ttm
+    end
+
     balance_sheet = balance_sheet_helper(date: date, period: period)
     total_assets = balance_sheet.total_assets
     total_liabilities = balance_sheet.total_liabilities
@@ -87,8 +105,13 @@ class Stock < ActiveRecord::Base
     ensure_date(date: date)
     ensure_period(period: period)
 
-    # TODO is this TTM?
-    return self.overviews.last.eps if period == :ttm
+    if period == :ttm
+      sum_net_income = net_income_ttm(date: date)
+      # Average the num shares outstanding
+      sum_average_shares_outstanding = num_shares_outstanding_ttm(date: date) / 4
+
+      return sum_net_income / sum_average_shares_outstanding.to_f
+    end
 
     net_income = net_income(date: date, period: period)
     num_shares_outstanding = num_shares_outstanding(date: date, period: period)
@@ -100,31 +123,48 @@ class Stock < ActiveRecord::Base
     ensure_date(date: date)
     ensure_period(period: period)
 
-    self.overviews.last.peg_ratio # ** This is just for the previous quarter.
-    # Maybe use overview.quarterly_earnings_growth_yoy
-    # price_to_earnings / earnings per share growth (Analyst growth value)
+    stock_price = stock_price_for_date(date: date)
+    eps_ttm = earnings_per_share_last_5(date: date) # Ordered in DESC order.
+    eps_ttm_growth = (eps_ttm.first / eps_ttm.last) - 1
+    eps_ttm_growth_percent = eps_ttm_growth * 100
+
+    stock_price / eps_ttm.first / eps_ttm_growth_percent
   end
 
   def price_to_sales(date:, period:)
     ensure_date(date: date)
     ensure_period(period: period)
+    total_revenue = 0
 
-    return self.overviews.last.price_to_sales_ratio_ttm if period == :ttm
+    if period == :ttm
+      total_revenue = total_revenue_ttm(date: date)
+      num_shares_outstanding = num_shares_outstanding(date: date, period: :quarterly)
+    else
+      total_revenue = income_statement_helper(date: date, period: period).total_revenue
+      num_shares_outstanding = num_shares_outstanding(date: date, period: period)
+    end
 
     stock_price = stock_price_for_date(date: date)
-    num_shares_outstanding = num_shares_outstanding(date: date, period: period)
-    total_revenue = income_statement_helper(date: date, period: period).total_revenue
+    revenue_per_share = total_revenue / num_shares_outstanding
 
-    sales_per_share = total_revenue / num_shares_outstanding
-    stock_price / sales_per_share
+    stock_price / revenue_per_share
   end
 
   def debt_to_equity(date:, period:)
     ensure_date(date: date)
     ensure_period(period: period)
 
-    # TODO no debt to equity for ttm?
-    return nil if period == :ttm
+    if period == :ttm
+      sum_liabilities = 0
+      sum_shareholder_equity = 0
+
+      self.balance_sheets.last_4(date, :quarterly).each do |balance_sheet|
+        sum_liabilities += balance_sheet.total_liabilities
+        sum_shareholder_equity += balance_sheet.total_shareholder_equity
+      end
+
+      return sum_liabilities / sum_shareholder_equity.to_f
+    end
 
     total_liabilities = balance_sheet_helper(date: date, period: period).total_liabilities
     shareholder_equity = shareholder_equity(date: date, period: period)
@@ -136,7 +176,6 @@ class Stock < ActiveRecord::Base
     ensure_date(date: date)
     ensure_period(period: period)
 
-    # TODO is this TTM?
     return self.overviews.last.market_capitalization if period == :ttm
 
     stock_price = stock_price_for_date(date: date)
@@ -149,8 +188,16 @@ class Stock < ActiveRecord::Base
     ensure_date(date: date)
     ensure_period(period: period)
 
-    # TODO no retained earnings for ttm?
-    return nil if period == :ttm
+    if period == :ttm
+      retained_earnings_ttm = 0
+
+      self.balance_sheets.last_4(date, :quarterly).each do |balance_sheet|
+        retained_earnings_ttm += balance_sheet.retained_earnings
+      end
+
+      return retained_earnings_ttm
+    end
+
 
     balance_sheet_helper(date: date, period: period).retained_earnings
   end
@@ -159,8 +206,16 @@ class Stock < ActiveRecord::Base
     ensure_date(date: date)
     ensure_period(period: period)
 
-    # TODO no R&D for ttm?
-    return nil if period == :ttm
+    if period == :ttm
+      sum_r_and_d = 0
+
+      self.income_statements.last_4(date, :quarterly).each do |income_statement|
+        next unless income_statement.research_and_development
+        sum_r_and_d += income_statement.research_and_development
+      end
+
+      return sum_r_and_d
+    end
 
     income_statement_helper(date: date, period: period).research_and_development
   end
@@ -168,17 +223,27 @@ class Stock < ActiveRecord::Base
   def dividend_yield(date:, period:)
     ensure_date(date: date)
     ensure_period(period: period)
+    stock_price = stock_price_for_date(date: date)
 
-    # TODO is this TTM?
-    return self.overviews.last.dividend_yield if period == :ttm
+    if period == :ttm
+      dividend_payout_per_share_ttm = 0
 
-    binding.pry
+      self.cash_flow_statements.last_4(date, :quarterly).each do |cash_flow_statement|
+        next unless cash_flow_statement.dividend_payout
+
+        dividend_payout = cash_flow_statement.dividend_payout.abs
+        num_shares_outstanding = num_shares_outstanding(date: cash_flow_statement.fiscal_date_ending, period: :quarterly)
+
+        dividend_payout_per_share_ttm += dividend_payout / num_shares_outstanding
+      end
+
+      return dividend_payout_per_share_ttm / stock_price
+    end
+
     dividend_payout = cash_flow_statement_helper(date: date, period: period).dividend_payout&.abs
     return 0 unless dividend_payout
 
     num_shares_outstanding = num_shares_outstanding(date: date, period: period)
-    stock_price = stock_price_for_date(date: date)
-
     dividend_payout_per_share = dividend_payout / num_shares_outstanding
 
     dividend_payout_per_share / stock_price
@@ -188,8 +253,16 @@ class Stock < ActiveRecord::Base
     ensure_date(date: date)
     ensure_period(period: period)
 
-    # TODO no dividend payout for ttm?
-    return nil if period == :ttm
+    if period == :ttm
+      sum_dividend_payout = 0
+
+      self.cash_flow_statements.last_4(date, :quarterly).each do |cash_flow_statement|
+        next unless cash_flow_statement.dividend_payout
+        sum_dividend_payout += cash_flow_statement.dividend_payout.abs
+      end
+
+      return sum_dividend_payout
+    end
 
     cash_flow_statement_helper(date: date, period: period).dividend_payout
   end
@@ -198,7 +271,17 @@ class Stock < ActiveRecord::Base
     ensure_date(date: date)
     ensure_period(period: period)
 
-    # TODO TTM calc.
+    if period == :ttm
+      total_revenue_ttm = total_revenue_ttm(date: date)
+      cost_of_revenue_ttm = 0
+
+      self.income_statements.last_4(date, :quarterly).each do |income_statement|
+        next unless income_statement.cost_of_revenue
+        cost_of_revenue_ttm += income_statement.cost_of_revenue
+      end
+
+      return (total_revenue_ttm - cost_of_revenue_ttm) / total_revenue_ttm.to_f
+    end
 
     income_statement = income_statement_helper(date: date, period: period)
     cost_of_goods_sold = income_statement.cost_of_revenue
@@ -212,13 +295,24 @@ class Stock < ActiveRecord::Base
     ensure_date(date: date)
     ensure_period(period: period)
 
-    return nil if period == :ttm
+    if period == :ttm
+      inventory_ttm = 0
+      total_revenue_ttm = total_revenue_ttm(date: date)
 
-    cost_of_revenue = income_statement_helper(date: date, period: period).cost_of_revenue
+      self.balance_sheets.last_4(date, :quarterly).each do |balance_sheet|
+        next unless balance_sheet.inventory
+        inventory_ttm += balance_sheet.inventory
+      end
+
+      return 0 if inventory_ttm == 0
+      return total_revenue_ttm / (inventory_ttm / 4)
+    end
+
+    total_revenue = income_statement_helper(date: date, period: period).total_revenue
     inventory = balance_sheet_helper(date: date, period: period).inventory
     return nil if inventory.nil?
 
-    cost_of_revenue / inventory
+    total_revenue / inventory
   end
 
   private
@@ -263,7 +357,7 @@ class Stock < ActiveRecord::Base
   def ratios_for_date(date:, period:)
     # TODO maybe make a ratios model??
     {
-      date => {
+      date.to_date => {
         :price => stock_price_for_date(date: date),
         :return_on_equity => return_on_equity(date: date, period: period),
         :price_to_earnings => price_to_earnings(date: date, period: period),
@@ -311,6 +405,16 @@ class Stock < ActiveRecord::Base
     net_income.to_f
   end
 
+  def net_income_ttm(date:)
+    sum_net_income = 0
+
+    self.income_statements.last_4(date, :quarterly).each do |income_statement|
+      sum_net_income += income_statement.net_income
+    end
+
+    sum_net_income
+  end
+
   def num_shares_outstanding(date:, period:)
     balance_sheet = balance_sheet_helper(date: date, period: period)
     num_shares_outstanding = balance_sheet.common_stock_shares_outstanding
@@ -319,12 +423,45 @@ class Stock < ActiveRecord::Base
     num_shares_outstanding.to_f
   end
 
+  # This function will return the average num shares outstanding over a TTM period.
+  def num_shares_outstanding_ttm(date:)
+    sum_num_shares_outstanding = 0
+
+    self.balance_sheets.last_4(date, :quarterly).each do |balance_sheet|
+      sum_num_shares_outstanding += balance_sheet.common_stock_shares_outstanding
+    end
+
+    sum_num_shares_outstanding
+  end
+
   def shareholder_equity(date:, period:)
     balance_sheet = balance_sheet_helper(date: date, period: period)
     shareholder_equity = balance_sheet.total_shareholder_equity
     raise StockError, "Unable to get shareholder equity. Period: #{period} & date: #{date}" if shareholder_equity.nil?
 
     shareholder_equity.to_f
+  end
+
+  # This function calculates the EPS for the last 5 quarters INCLUDING the current one.
+  # Guaranteed to be sorted in DESC order
+  def earnings_per_share_last_5(date:)
+    # Determine dates of last 4 quarters, calculate EPS TTM for each one.
+
+    previous_4_quarters = self.income_statements.last_n(date, :quarterly, 5).pluck(:fiscal_date_ending)
+    previous_4_quarters.map do |date|
+      self.earnings_per_share(date: date, period: :ttm)
+    end
+  end
+
+
+  def total_revenue_ttm(date:)
+    total_revenue_ttm = 0
+
+    self.income_statements.last_4(date, :quarterly).each do |income_statement|
+      total_revenue_ttm += income_statement.total_revenue
+    end
+
+    total_revenue_ttm.to_f
   end
 end
 
