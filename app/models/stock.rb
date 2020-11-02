@@ -134,7 +134,6 @@ class Stock < ApplicationRecord
   def price_to_sales(date:, period:)
     ensure_date(date: date)
     ensure_period(period: period)
-    total_revenue = 0
 
     if period == :ttm
       total_revenue = total_revenue_ttm(date: date)
@@ -189,13 +188,13 @@ class Stock < ApplicationRecord
     ensure_period(period: period)
 
     if period == :ttm
-      retained_earnings_ttm = 0
+      retained_earnings_last_4 = []
 
       self.balance_sheets.last_4(date, :quarterly).each do |balance_sheet|
-        retained_earnings_ttm += balance_sheet.retained_earnings
+        retained_earnings_last_4 << balance_sheet.retained_earnings
       end
 
-      return retained_earnings_ttm
+      return retained_earnings_last_4.first - retained_earnings_last_4.last
     end
 
 
@@ -277,7 +276,7 @@ class Stock < ApplicationRecord
 
       self.income_statements.last_4(date, :quarterly).each do |income_statement|
         next unless income_statement.cost_of_revenue
-        cost_of_revenue_ttm += income_statement.cost_of_revenue
+        cost_of_revenue_ttm += income_statement.cost_of_revenue.abs
       end
 
       return (total_revenue_ttm - cost_of_revenue_ttm) / total_revenue_ttm.to_f
@@ -310,12 +309,10 @@ class Stock < ApplicationRecord
 
     total_revenue = income_statement_helper(date: date, period: period).total_revenue
     inventory = balance_sheet_helper(date: date, period: period).inventory
-    return nil if inventory.nil?
+    return 0.0 if inventory.nil?
 
     total_revenue / inventory
   end
-
-  private
 
   # ---------- Helpers  ----------
 
@@ -376,6 +373,8 @@ class Stock < ApplicationRecord
       }
     }
   end
+
+  private
 
   def balance_sheet_helper(date:, period:)
     balance_sheet = self.balance_sheets.find_by(fiscal_date_ending: date, period: period)
