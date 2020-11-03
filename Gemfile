@@ -64,3 +64,5 @@ gem "alphavantagerb", "1.5.0", git: "git://github.com/tylerhaugen-stanley/AlphaV
 gem 'oj', '~> 2.18'
 
 gem "awesome_print", "~> 1.8"
+
+gem "iex-ruby-client", "~> 1.3"
