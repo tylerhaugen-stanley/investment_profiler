@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_09_11_191110) do
+ActiveRecord::Schema.define(version: 2020_11_07_210324) do
 
   create_table "balance_sheets", force: :cascade do |t|
     t.integer "stock_id", null: false
@@ -99,6 +99,22 @@ ActiveRecord::Schema.define(version: 2020_09_11_191110) do
     t.integer "other_operating_cashflow"
     t.string "reported_currency"
     t.integer "stock_sale_and_purchase"
+  end
+
+  create_table "companies", force: :cascade do |t|
+    t.integer "stock_id", null: false
+    t.string "name"
+    t.string "exchange"
+    t.string "industry"
+    t.string "website"
+    t.string "description"
+    t.string "ceo"
+    t.string "security_name"
+    t.string "issue_type"
+    t.string "sector"
+    t.string "employees"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
   end
 
   create_table "income_statements", force: :cascade do |t|

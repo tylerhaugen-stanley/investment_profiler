@@ -139,4 +139,5 @@ class Main
   end
 end
 
-Main.validate_data
+iex = Adapters::IEX.new
+iex.fetch_data(symbol: 'AAPL')

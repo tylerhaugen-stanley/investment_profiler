@@ -32,7 +32,7 @@
 /config/master.key
 
 # Ignore local dot-env's
-.env*.local
+.env
 
 .idea/*
 .bin
@@ -47,9 +47,6 @@
 
 # ASDF version manager
 .tool-versions
-
-# Byebug history
-.byebug_history
 
 # CSV
 *.csv

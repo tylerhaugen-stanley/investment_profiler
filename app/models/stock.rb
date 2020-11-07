@@ -8,22 +8,13 @@ class Stock < ApplicationRecord
   has_many :time_series_dailies, foreign_key: :time_series_id
 
   has_one :time_series
+  has_one :company
 
   validates :symbol, uniqueness: true, presence: true
 
   def get_all_ratios(year:, period:)
     ensure_year(year: year)
     ensure_period(period: period)
-    # [
-    #   {
-    #     return_on_equity,
-    #     ...
-    #   },
-    #   {
-    #     return_on_equity,
-    #     ...
-    #   },
-    # ]
 
     # TODO This date needs to get the stock price on the LatestQuarter date.
     #   The overview information is based on current information unless noted otherwise
@@ -174,8 +165,6 @@ class Stock < ApplicationRecord
   def market_cap(date:, period:)
     ensure_date(date: date)
     ensure_period(period: period)
-
-    return self.overviews.last.market_capitalization if period == :ttm
 
     stock_price = stock_price_for_date(date: date)
     num_shares_outstanding = num_shares_outstanding(date: date, period: period)

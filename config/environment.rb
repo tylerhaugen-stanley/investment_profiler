@@ -1,7 +1,5 @@
 # dotfiles = []
 
-# TODO: How do you get true false values in env vars? Are they always just strings? I think we
-#   ran into this with UAT1/2
 # TODO why does dotenv not loan my .env.development.local file?
 require 'dotenv'
 # Dotenv.load('.env.development.local', '.env')
