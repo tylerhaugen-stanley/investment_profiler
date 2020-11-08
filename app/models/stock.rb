@@ -16,17 +16,15 @@ class Stock < ApplicationRecord
     ensure_year(year: year)
     ensure_period(period: period)
 
-    # TODO This date needs to get the stock price on the LatestQuarter date.
-    #   The overview information is based on current information unless noted otherwise
-    #   EX: 'return_on_equity_ttm', note the 'ttm' part.
-    date = self.overviews.newest.latest_quarter
+    # Get the most recent fiscal quarter date from any of the reports saved. Arbitrarily choosing
+    # balance sheet
+    date = self.balance_sheets.most_recent.fiscal_date_ending
     return [ratios_for_date(date: date, period: :ttm)] if period == :ttm
 
     # This only works for :quarterly and :annually
     search_dates(year: year, period: period).map do |date|
       ratios_for_date(date: date, period: period)
     end
-
   end
 
   # ---------- Ratio Calculations  ----------

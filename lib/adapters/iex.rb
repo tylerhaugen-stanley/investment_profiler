@@ -38,7 +38,6 @@ module Adapters
       # load_cash_flow_statements(period: :annual, num: 4)
       # load_company
       # load_time_series_dailies
-
       # load_stats
 
     end
@@ -65,7 +64,63 @@ module Adapters
 
     def load_stats
       stats = @client.advanced_stats(@stock.symbol)
-      # TODO
+
+      transformed_stats = {}
+      transformed_stats[:week_52_change] = stats.week_52_change
+      transformed_stats[:week_52_high] = stats.week_52_high
+      transformed_stats[:week_52_low] = stats.week_52_low
+      transformed_stats[:market_cap] = stats.market_cap
+      transformed_stats[:employees] = stats.employees
+      transformed_stats[:day_200_moving_avg] = stats.day_200_moving_avg
+      transformed_stats[:day_50_moving_avg] = stats.day_50_moving_avg
+      transformed_stats[:float] = stats.float
+      transformed_stats[:avg_10_volume] = stats.avg_10_volume
+      transformed_stats[:avg_30_volume] = stats.avg_30_volume
+      transformed_stats[:ttm_eps] = stats.ttm_eps
+      transformed_stats[:ttm_dividend_rate] = stats.ttm_dividend_rate
+      transformed_stats[:company_name] = stats.company_name
+      transformed_stats[:shares_outstanding] = stats.shares_outstanding
+      transformed_stats[:max_change_percent] = stats.max_change_percent
+      transformed_stats[:year_5_change_percent] = stats.year_5_change_percent
+      transformed_stats[:year_2_change_percent] = stats.year_2_change_percent
+      transformed_stats[:year_2_change_percent] = stats.year_1_change_percent
+      transformed_stats[:ytd_change_percent] = stats.ytd_change_percent
+      transformed_stats[:month_6_change_percent] = stats.month_6_change_percent
+      transformed_stats[:month_3_change_percent] = stats.month_3_change_percent
+      transformed_stats[:month_1_change_percent] = stats.month_1_change_percent
+      transformed_stats[:day_30_change_percent] = stats.day_30_change_percent
+      transformed_stats[:day_5_change_percent] = stats.day_5_change_percent
+      transformed_stats[:next_dividend_date] = stats.next_dividend_date
+      transformed_stats[:dividend_yield] = stats.dividend_yield
+      transformed_stats[:next_earnings_date] = stats.next_earnings_date
+      transformed_stats[:next_dividend_date] = stats.next_dividend_date
+      transformed_stats[:pe_ratio] = stats.pe_ratio
+      transformed_stats[:beta] = stats.beta
+      transformed_stats[:total_cash] = stats.total_cash
+      transformed_stats[:current_debt] = stats.current_debt
+      transformed_stats[:revenue] = stats.revenue
+      transformed_stats[:gross_profit] = stats.gross_profit
+      transformed_stats[:total_revenue] = stats.total_revenue
+      transformed_stats[:ebitda] = stats.ebitda
+      transformed_stats[:revenue_per_share] = stats.revenue_per_share
+      transformed_stats[:revenue_per_employee] = stats.revenue_per_employee
+      transformed_stats[:debt_to_equity] = stats.debt_to_equity
+      transformed_stats[:profit_margin] = stats.profit_margin
+      transformed_stats[:enterprise_value] = stats.enterprise_value
+      transformed_stats[:enterprise_value_to_revenue] = stats.enterprise_value_to_revenue
+      transformed_stats[:price_to_sales] = stats.price_to_sales
+      transformed_stats[:price_to_book] = stats.price_to_book
+      transformed_stats[:forward_pe_ratio] = stats.forward_pe_ratio
+      transformed_stats[:peg_ratio] = stats.peg_ratio
+      transformed_stats[:pe_high] = stats.pe_high
+      transformed_stats[:pe_low] = stats.pe_low
+      transformed_stats[:week_52_high_date] = stats.week_52_high_date
+      transformed_stats[:week_52_low_date] = stats.week_52_low_date
+      transformed_stats[:put_call_ratio] = stats.put_call_ratio
+
+      transformed_stats[:stock_id] = @stock.id
+
+      # Stats.create(transformed_stats)
     end
 
     def load_company
@@ -195,7 +250,7 @@ module Adapters
       # Want to dynamically set the range of data we get for historical prices so that we don't
       # use more credits than we need to.
 
-      latest_time_series = @stock.time_series_dailies.newest
+      latest_time_series = @stock.time_series_dailies.most_recent
       return '2y' if latest_time_series.nil?
 
       diff = (Date.current - latest_time_series.date.to_date).to_i
