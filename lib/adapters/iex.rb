@@ -19,7 +19,6 @@ module Adapters
     end
 
     def fetch_data(symbol:)
-
       # Lookup stock object and load in new data if it exists. If not, create stock
       #   object and then load the data into the DB
       @stock = Stock.find_by(symbol: symbol)
@@ -38,10 +37,30 @@ module Adapters
       # load_cash_flow_statements(period: :quarter, num: 12)
       # load_cash_flow_statements(period: :annual, num: 4)
       # load_company
+      # load_time_series_dailies
 
       # load_stats
 
-      # load_time_series_dailies(time_series_id: stock.time_series.id)
+    end
+
+    def load_time_series_dailies
+      range = get_time_series_range
+      historical_prices = @client.historical_prices(@stock.symbol, {range: range})
+
+      historical_prices.each do |historical_price|
+        transformed_time_series_daily = {}
+        transformed_time_series_daily[:date] = Date.parse(historical_price.date)
+        transformed_time_series_daily[:open] = historical_price.u_open
+        transformed_time_series_daily[:close] = historical_price.u_close
+        transformed_time_series_daily[:high] = historical_price.u_high
+        transformed_time_series_daily[:low] = historical_price.u_low
+        transformed_time_series_daily[:volume] = historical_price.u_volume
+
+        transformed_time_series_daily[:time_series_id] = @stock.time_series.id
+        transformed_time_series_daily[:stock_id] = @stock.id
+
+        # TimeSeriesDaily.create(transformed_time_series_daily)
+      end
     end
 
     def load_stats
@@ -50,6 +69,8 @@ module Adapters
     end
 
     def load_company
+      return if @stock.company.present?
+
       company = @client.company(@stock.symbol)
 
       transformed_company = {}
@@ -163,12 +184,36 @@ module Adapters
       end
     end
 
-      private
+    private
 
-      def transform_period(period:)
-        return :quarterly if period == :quarter
-        :annually if period == :annual
+    def transform_period(period:)
+      return :quarterly if period == :quarter
+      :annually if period == :annual
+    end
+
+    def get_time_series_range
+      # Want to dynamically set the range of data we get for historical prices so that we don't
+      # use more credits than we need to.
+
+      latest_time_series = @stock.time_series_dailies.newest
+      return '2y' if latest_time_series.nil?
+
+      diff = (Date.current - latest_time_series.date.to_date).to_i
+
+      case diff
+      when 1..30
+        '1m'
+      when 30..90
+        '3m'
+      when 90..180
+        '6m'
+      when 180..360
+        '1y'
+      when 360..720
+        '2y'
+      else
+        '5y'
       end
-
+    end
   end
 end
