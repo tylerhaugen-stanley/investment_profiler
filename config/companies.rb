@@ -12,7 +12,11 @@ module Companies
      'SPLK', 'SWKS', 'TSLA']
 
     list_3 = ['ROKU', 'SPOT', 'WORK', 'MCD', 'WEN', 'QSR', 'DRI', 'YUM', 'DOCU']
-    return list_3
-    list_1 + list_2
+
+    list_4 = ['CMG', 'MCD', 'SBUX', 'CRM', 'NOW', 'NFLX', 'GOOG', 'MSFT', 'NVDA', 'ISRG', 'TMO', 'DXCM', 'HON', 'ROK', 'BEP', 'NEE', 'BRKS',
+              'OLED']
+
+    return list_4
+    list_1 + list_2 + list_3
   end
 end

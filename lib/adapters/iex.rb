@@ -30,20 +30,20 @@ module Adapters
       end unless @stock
 
       # TODO Enable these calls once the library supports them.
-      # load_income_statements(period: :quarter, num: 12)
+      load_income_statements(period: :quarter, num: 12)
       # load_income_statements(period: :annual, num: 4)
-      # load_balance_sheets(period: :quarter, num: 12)
+      load_balance_sheets(period: :quarter, num: 12)
       # load_balance_sheets(period: :annual, num: 4)
-      # load_cash_flow_statements(period: :quarter, num: 12)
+      load_cash_flow_statements(period: :quarter, num: 12)
       # load_cash_flow_statements(period: :annual, num: 4)
-      # load_company
-      # load_time_series_dailies
+      load_company
+      # load_historical_prices
       # load_stats
 
     end
 
-    def load_time_series_dailies
-      range = get_time_series_range
+    def load_historical_prices
+      range = historical_prices_range
       historical_prices = @client.historical_prices(@stock.symbol, {range: range})
 
       historical_prices.each do |historical_price|
@@ -58,7 +58,7 @@ module Adapters
         transformed_time_series_daily[:time_series_id] = @stock.time_series.id
         transformed_time_series_daily[:stock_id] = @stock.id
 
-        # TimeSeriesDaily.create(transformed_time_series_daily)
+        # TimeSeriesDaily.new(transformed_time_series_daily)
       end
     end
 
@@ -142,7 +142,7 @@ module Adapters
 
       transformed_company[:stock_id] = @stock.id
 
-      # Company.create(transformed_company)
+      Company.create(transformed_company)
     end
 
     def load_cash_flow_statements(period:, num:)
@@ -153,8 +153,9 @@ module Adapters
         transformed_cash_flow_statement[:fiscal_date_ending] = Date.parse(cash_flow_statement.fiscal_date)
         transformed_cash_flow_statement[:net_income] = cash_flow_statement.net_income
         transformed_cash_flow_statement[:depreciation] = cash_flow_statement.depreciation
-        transformed_cash_flow_statement[:change_in_receivables] = cash_flow_statement.change_in_receivables
-        transformed_cash_flow_statement[:change_in_inventory] = cash_flow_statement.change_in_inventory
+        transformed_cash_flow_statement[:change_in_receivables] = cash_flow_statement.changes_in_receivables
+        transformed_cash_flow_statement[:change_in_inventory] = cash_flow_statement.changes_in_inventories
+        transformed_cash_flow_statement[:reported_currency] = cash_flow_statement.currency
         transformed_cash_flow_statement[:change_in_cash] = cash_flow_statement.cash_change
         transformed_cash_flow_statement[:operating_cashflow] = cash_flow_statement.cash_flow
         transformed_cash_flow_statement[:capital_expenditures] = cash_flow_statement.capital_expenditures
@@ -168,7 +169,7 @@ module Adapters
         transformed_cash_flow_statement[:period] = transform_period(period: period)
         transformed_cash_flow_statement[:stock_id] = @stock.id
 
-        # CashFlowStatement.create(transformed_cash_flow_statement)
+        CashFlowStatement.create(transformed_cash_flow_statement)
       end
     end
 
@@ -180,6 +181,8 @@ module Adapters
         transformed_balance_sheet = {}
         transformed_balance_sheet[:fiscal_date_ending] = Date.parse(balance_sheet.fiscal_date)
         transformed_balance_sheet[:cash] = balance_sheet.current_cash
+        transformed_balance_sheet[:common_stock_shares_outstanding] = balance_sheet.common_stock
+        transformed_balance_sheet[:reported_currency] = balance_sheet.currency
         transformed_balance_sheet[:short_term_investments] = balance_sheet.short_term_investments
         transformed_balance_sheet[:net_receivables] = balance_sheet.receivables
         transformed_balance_sheet[:inventory] = balance_sheet.inventory
@@ -208,7 +211,7 @@ module Adapters
         transformed_balance_sheet[:period] = transform_period(period: period)
         transformed_balance_sheet[:stock_id] = @stock.id
 
-        # BalanceSheet.create(transformed_balance_sheet)
+        BalanceSheet.create(transformed_balance_sheet)
       end
     end
 
@@ -219,6 +222,8 @@ module Adapters
         transformed_income_statement = {}
         transformed_income_statement[:fiscal_date_ending] = Date.parse(income_statement.fiscal_date)
         transformed_income_statement[:total_revenue] = income_statement.total_revenue
+        transformed_income_statement[:cost_of_revenue] = income_statement.cost_of_revenue
+        transformed_income_statement[:reported_currency] = income_statement.currency
         transformed_income_statement[:gross_profit] = income_statement.gross_profit
         transformed_income_statement[:research_and_development] = income_statement.research_and_development
         transformed_income_statement[:selling_general_administrative] = income_statement.selling_general_and_admin
@@ -235,7 +240,7 @@ module Adapters
         transformed_income_statement[:period] = transform_period(period: period)
         transformed_income_statement[:stock_id] = @stock.id
 
-        # IncomeStatement.create(transformed_income_statement)
+        IncomeStatement.create(transformed_income_statement)
       end
     end
 
@@ -246,11 +251,12 @@ module Adapters
       :annually if period == :annual
     end
 
-    def get_time_series_range
+    def historical_prices_range
       # Want to dynamically set the range of data we get for historical prices so that we don't
       # use more credits than we need to.
 
-      latest_time_series = @stock.time_series_dailies.most_recent
+      # Date being the date for which the time series data is for.
+      latest_time_series = @stock.time_series_dailies.most_recent(by: :date)
       return '2y' if latest_time_series.nil?
 
       diff = (Date.current - latest_time_series.date.to_date).to_i

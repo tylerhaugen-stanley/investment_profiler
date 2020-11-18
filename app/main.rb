@@ -6,7 +6,7 @@ class Main
   SYMBOLS = Companies.symbols_to_process
 
   def self.fetch_data
-    api             = Adapters::AlphaVantage.new
+    api             = Adapters::IEX.new
     failed_symbols  = []
 
     # Fetch data
@@ -14,11 +14,9 @@ class Main
       begin
         puts "Fetching data for: #{symbol}"
         api.fetch_data(symbol: symbol)
-        api_wait(seconds: 60) # TODO This will run one final time even when there are no more symbols to look at.
       rescue StandardError => e
         failed_symbols << symbol
         Rails.logger.error "Unable to gather stock data for #{symbol} - #{e.message} \n #{e.backtrace}"
-        api_wait(seconds: 60) # TODO This will run one final time even when there are no more symbols to look at.
       end
     end
 
@@ -139,5 +137,4 @@ class Main
   end
 end
 
-iex = Adapters::IEX.new
-iex.fetch_data(symbol: 'AAPL')
+Main.build_csv

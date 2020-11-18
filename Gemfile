@@ -65,4 +65,5 @@ gem 'oj', '~> 2.18'
 
 gem "awesome_print", "~> 1.8"
 
-gem "iex-ruby-client", "~> 1.3"
+# TODO Update this once iex deploys a new version
+gem "iex-ruby-client", git: "git://github.com/tylerhaugen-stanley/iex-ruby-client.git", branch: 'master'

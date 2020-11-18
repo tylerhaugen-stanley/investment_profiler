@@ -14,7 +14,7 @@ module Helpers
   # TODO move this to the api layer. It is the one that should know it needs to sleep.
   def api_wait(seconds:)
     puts "Waiting #{seconds} seconds due to API rate limit"
-    (0...seconds).each do |second|
+    (0...seconds).each do |_second|
       print '.'
       sleep(1)
     end

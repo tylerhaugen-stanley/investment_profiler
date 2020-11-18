@@ -18,7 +18,7 @@ class Stock < ApplicationRecord
 
     # Get the most recent fiscal quarter date from any of the reports saved. Arbitrarily choosing
     # balance sheet
-    date = self.balance_sheets.most_recent.fiscal_date_ending
+    date = self.balance_sheets.most_recent(by: :fiscal_date_ending).fiscal_date_ending
     return [ratios_for_date(date: date, period: :ttm)] if period == :ttm
 
     # This only works for :quarterly and :annually
@@ -165,7 +165,8 @@ class Stock < ApplicationRecord
     ensure_period(period: period)
 
     stock_price = stock_price_for_date(date: date)
-    num_shares_outstanding = num_shares_outstanding(date: date, period: period)
+    num_shares_outstanding = num_shares_outstanding(date: date, period: :quarterly) if period == :ttm
+    num_shares_outstanding = num_shares_outstanding(date: date, period: period) unless period == :ttm
 
     stock_price * num_shares_outstanding
   end
