@@ -29,7 +29,6 @@ module Adapters
         stock.save
       end unless @stock
 
-      # TODO Enable these calls once the library supports them.
       load_income_statements(period: :quarter, num: 12)
       # load_income_statements(period: :annual, num: 4)
       load_balance_sheets(period: :quarter, num: 12)
@@ -37,7 +36,7 @@ module Adapters
       load_cash_flow_statements(period: :quarter, num: 12)
       # load_cash_flow_statements(period: :annual, num: 4)
       load_company
-      # load_historical_prices
+      load_historical_prices
       # load_stats
 
     end
@@ -56,9 +55,8 @@ module Adapters
         transformed_time_series_daily[:volume] = historical_price.u_volume
 
         transformed_time_series_daily[:time_series_id] = @stock.time_series.id
-        transformed_time_series_daily[:stock_id] = @stock.id
 
-        # TimeSeriesDaily.new(transformed_time_series_daily)
+        TimeSeriesDaily.create(transformed_time_series_daily)
       end
     end
 
@@ -120,7 +118,7 @@ module Adapters
 
       transformed_stats[:stock_id] = @stock.id
 
-      # Stats.create(transformed_stats)
+      Stats.create(transformed_stats)
     end
 
     def load_company

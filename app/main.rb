@@ -54,8 +54,8 @@ class Main
     industry_mapping = {}
 
     companies.each do |symbol|
-      overview = Stock.find_by(symbol: symbol).overviews.newest
-      industry = overview.industry
+      company = Stock.find_by(symbol: symbol).company
+      industry = company.industry
 
       industry_mapping[industry].append(symbol) if industry_mapping.has_key?(industry)
       industry_mapping[industry] = [symbol] unless industry_mapping.has_key?(industry)
@@ -137,4 +137,4 @@ class Main
   end
 end
 
-Main.build_csv
+Main.fetch_data
