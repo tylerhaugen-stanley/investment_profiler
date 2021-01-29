@@ -1,5 +1,7 @@
 module Adapters
   class AlphaVantage
+    class AlphaVantageError < StandardError; end
+
     def initialize
       @client = Alphavantage::Client.new key: ENV['ALPHAVANTAGE_API_KEY']
     end
@@ -181,5 +183,3 @@ module Adapters
     end
   end
 end
-
-class AlphaVantageError < StandardError; end

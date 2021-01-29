@@ -38,8 +38,9 @@ module Adapters
       load_company
       load_historical_prices
       # load_stats
-
     end
+
+    private
 
     def load_historical_prices
       range = historical_prices_range
@@ -241,8 +242,6 @@ module Adapters
         IncomeStatement.create(transformed_income_statement)
       end
     end
-
-    private
 
     def transform_period(period:)
       return :quarterly if period == :quarter
