@@ -50,3 +50,7 @@
 
 # CSV
 *.csv
+
+.idea/*
+.generators
+bin/*
